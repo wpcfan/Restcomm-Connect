@@ -18,9 +18,16 @@ package org.mobicents.servlet.sip.restcomm.http;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.junit.Test;
+import org.mobicents.servlet.sip.restcomm.entities.Client;
 
 import com.twilio.sdk.TwilioRestClient;
+import com.twilio.sdk.TwilioRestException;
+import com.twilio.sdk.TwilioRestResponse;
+import com.twilio.sdk.resource.instance.Account;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -28,13 +35,28 @@ import com.twilio.sdk.TwilioRestClient;
 // @RunWith(Arquillian.class)
 public class ClientsEndpointTest extends AbstractEndpointTest {
 	
+	final String endpoint = "http://127.0.0.1:8888/restcomm";
+	
 	public ClientsEndpointTest() {
 		super();
 	}
 
-	@Test public void createClientTest() {
-		final TwilioRestClient client = new TwilioRestClient("ACae6e420f425248d6a26948c17a9e2acf",
-				"77f8c12cc7b8f8423e5c38b035249166", "http://127.0.0.1:8888/restcomm");
-		assertTrue(client.getEndpoint().equalsIgnoreCase("http://127.0.0.1:8888/restcomm"));
+	@Test public void createClientTest() throws TwilioRestException {
+		final TwilioRestClient twilioClient = new TwilioRestClient("ACae6e420f425248d6a26948c17a9e2acf",
+				"77f8c12cc7b8f8423e5c38b035249166", endpoint);
+		assertTrue(twilioClient.getEndpoint().equalsIgnoreCase("http://127.0.0.1:8888/restcomm"));
+		final Account account = twilioClient.getAccount();
+		final Map<String, String> parameters = new HashMap<String, String>();
+		parameters.put("friendlyName", "testClientEndpoint");
+		parameters.put("login", "test");
+		parameters.put("password", "1234");
+		parameters.put("VoiceUrl", endpoint+"/demo/hello-world.xml");
+		parameters.put("VoiceMethod", "POST");
+		parameters.put("VoiceFallbackUrl", endpoint+"/demo/hello-world.xml");
+		parameters.put("VoiceFallbackMethod", "POST");
+		TwilioRestResponse response = twilioClient.safeRequest(endpoint+"/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/Clients.json", "POST", parameters);
+		
+		assertTrue(response.getHttpStatus()==200);
+		
 	}
 }

@@ -25,6 +25,7 @@ import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.interpol.ConfigurationInterpolator;
 import org.apache.log4j.Logger;
 import org.mobicents.servlet.sip.restcomm.asr.SpeechRecognizer;
+import org.mobicents.servlet.sip.restcomm.cache.CacheJanitor;
 import org.mobicents.servlet.sip.restcomm.callmanager.mgcp.MgcpConferenceCenter;
 import org.mobicents.servlet.sip.restcomm.callmanager.mgcp.MgcpServerManager;
 import org.mobicents.servlet.sip.restcomm.dao.DaoManager;
@@ -150,6 +151,10 @@ public final class Bootstrapper {
     final SpeechSynthesizer speechSynthesizer = (SpeechSynthesizer)ObjectFactory.getInstance().getObjectInstance(classpath);
     speechSynthesizer.configure(configuration.subset("speech-synthesizer"));
     speechSynthesizer.start();
+    if(configuration.getString("cache-janitor").equalsIgnoreCase("true")){
+    	CacheJanitor cacheJanitor = new CacheJanitor(configuration);
+    	cacheJanitor.start();
+    }
     return speechSynthesizer;
   }
 }

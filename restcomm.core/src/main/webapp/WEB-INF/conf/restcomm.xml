@@ -118,6 +118,12 @@
 	-->
 	<speech-synthesizer class="org.mobicents.servlet.sip.restcomm.tts.acapela.AcapelaSpeechSynthesizer">
 		<cache-path>${restcomm:home}/cache/acapela</cache-path>
+		<!-- Enable cache janitor -->
+		<cache-janitor>true</cache-janitor>
+		<!-- Cache janitor interval in hours -->
+		<cache-janitor-interval>24</cache-janitor-interval>
+		<!-- Number of days to keep cache files -->
+		<retention-period>7</retention-period> 
 		<service-root>http://vaas.acapela-group.com/Services/Synthesizer</service-root>
 		<application></application>
 		<login></login>

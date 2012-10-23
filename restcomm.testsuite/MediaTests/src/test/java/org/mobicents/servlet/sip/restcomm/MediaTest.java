@@ -1,13 +1,13 @@
 package org.mobicents.servlet.sip.restcomm;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.sip.address.SipURI;
 import javax.sip.message.Response;
 
 import org.apache.log4j.Logger;
@@ -25,13 +25,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mobicents.arquillian.mediaserver.api.EmbeddedMediaserver;
+import org.mobicents.arquillian.mediaserver.api.EndpointType;
+import org.mobicents.arquillian.mediaserver.api.annotations.GetMediaserver;
 
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
-import com.twilio.sdk.resource.factory.ClientFactory;
 import com.twilio.sdk.resource.factory.IncomingPhoneNumberFactory;
 import com.twilio.sdk.resource.instance.Account;
-import com.twilio.sdk.resource.instance.Client;
 import com.twilio.sdk.resource.instance.IncomingPhoneNumber;
 
 /**
@@ -44,8 +45,11 @@ import com.twilio.sdk.resource.instance.IncomingPhoneNumber;
 public class MediaTest extends AbstractEndpointTest {
 
 	private Logger logger = Logger.getLogger(MediaTest.class);
-	public String endpoint = "http://127.0.0.1:8888/restcomm";
-
+	public static String endpoint = "http://127.0.0.1:8888/restcomm";
+	
+	@GetMediaserver
+	private EmbeddedMediaserver mediaserver;
+	
 	@ArquillianResource
 	private Deployer deployer;
 
@@ -60,18 +64,24 @@ public class MediaTest extends AbstractEndpointTest {
 	private ContainerManagerTool containerManager = null;
 
 	private static SipStackTool sipStackTool;
-	private TwilioRestClient twilioClient;
-	private IncomingPhoneNumber incomingPhoneNumber;
+	private static TwilioRestClient twilioClient;
+	private static IncomingPhoneNumber incomingPhoneNumber;
 	private String uri = "sip:14321@127.0.0.1:5070";
 	
 	@BeforeClass
-	public static void beforeClass(){
+	public static void beforeClass() throws TwilioRestException{
 		sipStackTool = new SipStackTool("MediaTest");
+		createPhoneNumber();
 	}
 
 	@Before
 	public void setUp() throws Exception
 	{
+		mediaserver.startServer();
+		mediaserver.installEndpoint(EndpointType.IVR, 2);
+		mediaserver.installEndpoint(EndpointType.CONFERENCE,2);
+		mediaserver.installEndpoint(EndpointType.PACKETRELAY,2);
+		
 		//Create the sipCall and start listening for messages
 		receiver = sipStackTool.initializeSipStack(SipStack.PROTOCOL_UDP, "127.0.0.1", "5080", "127.0.0.1:5070");
 		sipPhone = receiver.createSipPhone("127.0.0.1", SipStack.PROTOCOL_UDP, 5070, "sip:RestcommUser@there.com");
@@ -82,16 +92,19 @@ public class MediaTest extends AbstractEndpointTest {
 	@After
 	public void tearDown() throws Exception
 	{
-
+		
 		if(sipCall != null)	sipCall.disposeNoBye();
 		if(sipPhone != null) sipPhone.dispose();
 		if(receiver != null) receiver.dispose();
 //		if(incomingPhoneNumber != null) incomingPhoneNumber = null;
 //		if(twilioClient != null) twilioClient = null;
+	
+//		mediaserver.removeAllEndpoints();
+		mediaserver.stopServer();
 		
 	}
 
-	private void createPhoneNumber() throws TwilioRestException{
+	private static void createPhoneNumber() throws TwilioRestException{
 			twilioClient = new TwilioRestClient("ACae6e420f425248d6a26948c17a9e2acf",
 					"77f8c12cc7b8f8423e5c38b035249166", endpoint);
 			final Account account = twilioClient.getAccount();
@@ -119,7 +132,7 @@ public class MediaTest extends AbstractEndpointTest {
 	//Issue: http://code.google.com/p/restcomm/issues/detail?id=87
 	@Test
 	public void sendByeAfterAck() throws ParseException, TwilioRestException{	
-		createPhoneNumber();
+//		createPhoneNumber();
 		assertTrue(incomingPhoneNumber.getAccountSid().equals("ACae6e420f425248d6a26948c17a9e2acf"));
 		assertTrue(incomingPhoneNumber.getPhoneNumber().equals("+14321"));
 		assertTrue(incomingPhoneNumber.getVoiceUrl().equals("http://restcomm-demo.appspot.com/app/voice/restcomm2.xml"));
@@ -143,7 +156,7 @@ public class MediaTest extends AbstractEndpointTest {
 
 	@Test @Ignore
 	public void sendCancel() throws ParseException, TwilioRestException{	
-		createPhoneNumber();
+//		createPhoneNumber();
 		assertTrue(incomingPhoneNumber.getAccountSid().equals("ACae6e420f425248d6a26948c17a9e2acf"));
 		assertTrue(incomingPhoneNumber.getPhoneNumber().equals("+14321"));
 		assertTrue(incomingPhoneNumber.getVoiceUrl().equals("http://restcomm-demo.appspot.com/app/voice/restcomm2.xml"));
@@ -169,7 +182,7 @@ public class MediaTest extends AbstractEndpointTest {
 	
 	@Test
 	public void sendByeAfterAckMany() throws ParseException, TwilioRestException{	
-		createPhoneNumber();
+//		createPhoneNumber();
 		assertTrue(incomingPhoneNumber.getAccountSid().equals("ACae6e420f425248d6a26948c17a9e2acf"));
 		assertTrue(incomingPhoneNumber.getPhoneNumber().equals("+14321"));
 		assertTrue(incomingPhoneNumber.getVoiceUrl().equals("http://restcomm-demo.appspot.com/app/voice/restcomm2.xml"));
@@ -205,7 +218,7 @@ public class MediaTest extends AbstractEndpointTest {
 	
 	@Test
 	public void sendBye() throws ParseException, TwilioRestException{	
-		createPhoneNumber();
+//		createPhoneNumber();
 		assertTrue(incomingPhoneNumber.getAccountSid().equals("ACae6e420f425248d6a26948c17a9e2acf"));
 		assertTrue(incomingPhoneNumber.getPhoneNumber().equals("+14321"));
 		assertTrue(incomingPhoneNumber.getVoiceUrl().equals("http://restcomm-demo.appspot.com/app/voice/restcomm2.xml"));
@@ -233,7 +246,7 @@ public class MediaTest extends AbstractEndpointTest {
 	
 	@Test
 	public void testManyCalls() throws ParseException, TwilioRestException{	
-		createPhoneNumber();
+//		createPhoneNumber();
 		assertTrue(incomingPhoneNumber.getAccountSid().equals("ACae6e420f425248d6a26948c17a9e2acf"));
 		assertTrue(incomingPhoneNumber.getPhoneNumber().equals("+14321"));
 		assertTrue(incomingPhoneNumber.getVoiceUrl().equals("http://restcomm-demo.appspot.com/app/voice/restcomm2.xml"));

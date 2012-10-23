@@ -17,9 +17,21 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<version.mediaserver>3.0.0.CR1</version.mediaserver>
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.mobicents.arquillian.container</groupId>
+			<artifactId>mss-arquillian-mediaserver-extension</artifactId>
+			<version>1.0.0-ALPHA2-SNAPSHOT</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mobicents.arquillian.container</groupId>
+			<artifactId>mss-arquillian-mediaserver-api</artifactId>
+			<version>1.0.0-ALPHA2-SNAPSHOT</version>
+		</dependency>
 
 	</dependencies>
 </project>

@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % BOOK_ENTITIES SYSTEM "RestComm_User_Guide.ent">
+%BOOK_ENTITIES;
+]>
+<!-- chapter id nickname: ittsss -->
+<chapter id="Why_RestComm">
+	<title>Why Use &SHORT_PLATFORM_NAME;</title>
+	<para>There are many reasons to use &SHORT_PLATFORM_NAME; and below are a few</para>
+	<para>
+ 		
+	</para>
+	
+	
+<para>
+What you can build with &SHORT_PLATFORM_NAME; is often limited by your imagination. Because of the flexibility that is built into the system, you will be able to create, with little effort, commercial grade applications like the following: 
+
+
+
+<itemizedlist mark='opencircle'>
+
+<listitem>
+<para>
+An application that will call hundreds of clients and play a pre-recorded marketing message (electoral campaign, products marketing, etc.)
+</para>
+</listitem>
+
+<listitem>
+<para>
+An application that will automatically call people and warn them of an impending emergency like hurricane, flooding, etc.
+</para>
+</listitem>
+<listitem >
+<para>
+An application to reserve a table at your favorite restaurant or order meals like Pizzas.
+</para>
+</listitem>
+<listitem>
+<para>
+An application to perform telephone surveys interacting with users automatically
+</para>
+</listitem>
+<listitem>
+<para>
+Applications to schedule/reschedule, cancel and delay doctors appointment. 
+</para>
+</listitem>
+<listitem>
+<para>
+Applications to offer users at the airport, upgrades from economy to business class or alert passengers to special offers
+</para>
+</listitem>
+
+<listitem>
+<para>
+Applications to offer businesses a tool to alert customers to current discounts and special offers. 
+</para>
+</listitem>
+
+<listitem>
+<para>
+An application that will interact with major brands (Cisco, Avaya,etc) SIP endpoints. This is great because you are not 
+tied to closed source platform. &SHORT_PLATFORM_NAME; lets you access the source code and adapt your application to talk
+to anyone using SIP protocol. 
+</para>
+</listitem>
+
+<listitem>
+<para>
+ &SHORT_PLATFORM_NAME; can also be used to setup a short code SMS business that will allow small and large business to get clients to subscribe and receive
+ marketing or special deals.
+</para>
+</listitem>
+
+</itemizedlist>
+
+</para>>
+<para>
+These are just a few selections of what you can achieve with &SHORT_PLATFORM_NAME;. The next section will explain how you can create simple applications with little effort. 
+</para>
+	
+	
+	
+</chapter>

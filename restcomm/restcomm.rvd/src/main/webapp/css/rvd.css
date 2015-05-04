@@ -562,6 +562,10 @@ textarea.medium {
 	opacity: 0.8;
 }
 
+.sticky-workspace{
+	float:right;
+}
+
 
 /* ------------------ #/packaging/ view -------------------- */
 .rvd-packaging .col-md-4 .rvd-appversion {

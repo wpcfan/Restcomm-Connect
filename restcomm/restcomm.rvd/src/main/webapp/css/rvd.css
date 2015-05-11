@@ -564,6 +564,7 @@ textarea.medium {
 
 .sticky-workspace{
 	float:right;
+	z-index:-1;
 }
 
 

@@ -228,6 +228,8 @@
 		</configuration-file>
 		<data-files>${restcomm:home}/WEB-INF/data/hsql</data-files>
 		<sql-files>${restcomm:home}/WEB-INF/sql</sql-files>
+		<hsqldb-schema-update-scripts>${restcomm:home}/WEB-INF/scripts/changelog/hsqldb</hsqldb-schema-update-scripts>
+		<mariadb-schema-update-scripts>${restcomm:home}/WEB-INF/scripts/changelog/mariadb</mariadb-schema-update-scripts>
 	</dao-manager>
 	
 	<amazon-s3>

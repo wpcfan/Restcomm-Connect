@@ -1,9 +1,7 @@
 package org.mobicents.servlet.restcomm;
 
-import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
 
 import javax.servlet.ServletContext;
 import javax.servlet.sip.SipServlet;
@@ -12,14 +10,11 @@ import javax.servlet.sip.SipServletListener;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.interpol.ConfigurationInterpolator;
-import org.apache.ibatis.migration.FileMigrationLoader;
-import org.apache.ibatis.migration.JdbcConnectionProvider;
-import org.apache.ibatis.migration.operations.UpOperation;
 import org.apache.log4j.Logger;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
+import org.mobicents.servlet.restcomm.database.schema.DatabaseSchemaUpdate;
 import org.mobicents.servlet.restcomm.entities.shiro.ShiroResources;
 import org.mobicents.servlet.restcomm.loader.ObjectFactory;
 import org.mobicents.servlet.restcomm.loader.ObjectInstantiationException;
@@ -184,9 +179,9 @@ SipServletListener {
             Version.printVersion();
             Ping ping = new Ping(xml, context);
 
-            //schema update
+            //database schema update
             try {
-                databaseSchemaUpdate(context);
+                new DatabaseSchemaUpdate(context);
             } catch (Exception e) {
                 logger.error("schema update exception:", e);
             }
@@ -200,58 +195,5 @@ SipServletListener {
 
     }
 
-    // upgrading Restcomm DB schema upgrade during bootstrap
-    @SuppressWarnings("unchecked")
-    public void databaseSchemaUpdate(ServletContext context) throws Exception {
-        String restcommXMLPath = context.getRealPath("WEB-INF/conf/restcomm.xml");
-        String mybatisXMLPath = context.getRealPath("WEB-INF/conf/mybatis.xml");
-        String dbDirectoryPath = context.getRealPath("WEB-INF/data/hsql");
-        XMLConfiguration mybatisXML = new XMLConfiguration(mybatisXMLPath);
-        XMLConfiguration restcommXML = new XMLConfiguration(restcommXMLPath);
-        File hsqldbMigrationScriptsFiles = new File (restcommXML.getString("dao-manager.hsqldb-schema-update-scripts"));
-        String jdbcDriver= null;
-        String jdbcUrl= null;
-        String jdbcUsername= null;
-        String jdbcPassword = null;
-        String name = null;
-        String value = null;
-        String currentDB = mybatisXML.getString("environments[@default]");
-
-
-        if ( currentDB.equals("production")){
-
-            logger.error("The database in use is hsqldb : " + currentDB );
-
-            List<HierarchicalConfiguration> lists = mybatisXML.configurationsAt("environments.environment.dataSource.property");
-            for(HierarchicalConfiguration sub : lists){
-                name = sub.getString("[@name]");
-                value = sub.getString("[@value]");
-
-                if (name.equals("driver")){
-                    jdbcDriver = value;
-                }else if(name.equals("url")){
-                    //used to expand the ${data} from mybatix.xml
-                    value = value.replace("${data}", dbDirectoryPath);
-                    jdbcUrl = value;
-                }else if (name.equals("username")){
-                    jdbcUsername = value;
-                }else if (name.equals("password")){
-                    jdbcPassword = value;
-                }
-
-            }
-
-            // UpOperation reades the schema migration and updates the DB
-            new UpOperation().operate(
-                    new JdbcConnectionProvider(jdbcDriver, jdbcUrl, jdbcUsername, jdbcPassword),
-                    new FileMigrationLoader(hsqldbMigrationScriptsFiles, null,null), null, null);
-
-        } /*else if(currentDB == "mariadb"){
-
-        }*/
-
-
-
-    }
 
 }

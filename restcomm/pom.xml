@@ -5,7 +5,7 @@
 
 	<groupId>com.telestax.servlet</groupId>
 	<artifactId>restcomm</artifactId>
-	<version>7.3.1-SNAPSHOT</version>
+	<version>7.4.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>RestComm</name>
 	<description>A unified communications platform for web developers.</description>
@@ -95,7 +95,7 @@
 		<shiroweb.version>1.2.0</shiroweb.version>
 		<jersey.version>1.13</jersey.version>
 		<httpclient.version>4.2.5</httpclient.version>
-		<gson.version>2.1</gson.version>
+		<gson.version>2.3.1</gson.version>
 		<xstream.version>1.4.2</xstream.version>
 		<mongodb.version>2.7.2</mongodb.version>
 		<mybatis.version>3.2.2</mybatis.version>
@@ -105,10 +105,10 @@
 		<scalatest.version>1.9.1</scalatest.version>
 		<hsqldb.version>2.3.2</hsqldb.version>
 		<!-- <sip-ri.version>1.2.167</sip-ri.version> -->
-		<sip-ri.version>1.2.233</sip-ri.version>
+		<sip-ri.version>1.2.241</sip-ri.version>
 		<arquillian.version>1.0.3.Final</arquillian.version>
-		<mss.arquillian.version>1.0.0-CR1</mss.arquillian.version>
-		<mss.shrinkwrap.version>1.0.0-CR1</mss.shrinkwrap.version>
+		<mss.arquillian.version>1.0.0.CR3</mss.arquillian.version>
+		<mss.shrinkwrap.version>1.0.0.CR2</mss.shrinkwrap.version>
 		<shrinkwrap.resolver.version>2.0.0-alpha-4</shrinkwrap.resolver.version>
 		<sipunit.version>2.0.0</sipunit.version>
 		<!--tomcat.version>6.0.35</tomcat.version -->
@@ -149,6 +149,9 @@
 		<module>restcomm.tts.att</module>
 		<module>restcomm.ussd</module>
 		<module>restcomm.routing</module>
+		<module>restcomm.email</module>
+		<module>restcomm.email.api</module>
+
 	</modules>
 
 	<dependencyManagement>
@@ -572,7 +575,7 @@
 			<version>${mobicents.checkstyle.version}</version>
 		</dependency>
 
-		<!--dependency> <groupId>att</groupId> <artifactId>naturalvoices</artifactId> 
+		<!--dependency> <groupId>att</groupId> <artifactId>naturalvoices</artifactId>
 			<version>5.1</version> </dependency -->
 	</dependencies>
 
@@ -594,9 +597,24 @@
 				<artifactId>maven-eclipse-plugin</artifactId>
 				<version>2.8</version>
 				<configuration>
-					<useProjectReferences>true</useProjectReferences>
+					<useProjectReferences>false</useProjectReferences>
 				</configuration>
 			</plugin>
+			<!-- When testing maven sure fire spawns a new JVM. Setting it to never fixed the issue. -->
+			<!--
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+				<configuration>
+					<forkMode>never</forkMode>
+					<argLine>-Xms1024m -Xmx1024m -XX:MaxPermSize=2048m</argLine>
+					<systemPropertyVariables>
+						<user.name>${user.name}</user.name>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+			-->
 			<!-- Checkstyle -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -770,7 +788,7 @@
 		</repository>
 
 		<!-- Local repository for the ATT TTS Java wrapper library -->
-		<!-- <repository> <id>project</id> <url>file:///${basedir}/restcomm.tts.att/lib</url> 
+		<!-- <repository> <id>project</id> <url>file:///${basedir}/restcomm.tts.att/lib</url>
 			</repository> -->
 	</repositories>
 

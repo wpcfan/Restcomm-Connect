@@ -305,3 +305,25 @@ angular.module('Rvd').directive('multibutton', function () {
 		}
 	}
 });
+
+/*
+ * Overrides left property (css) defined by ngSticky after fix the element,
+ * so when the browser's width changes, the element keeps its original alignment.
+ */
+angular.module('Rvd').directive('resize', function ($window) {
+    return function (scope, element) {
+        var w = angular.element($window);
+        scope.getWindowWidth = function () {
+            return {
+                'w': w.width()
+            };
+        };
+        scope.$watch(scope.getWindowWidth, function (newValue, oldValue) {
+            element.css('left', 'auto');
+        }, true);
+        w.bind('resize', function () {
+            scope.$apply();
+        });
+    }
+});
+

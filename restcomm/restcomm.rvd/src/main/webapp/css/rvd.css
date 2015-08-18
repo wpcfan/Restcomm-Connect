@@ -564,7 +564,10 @@ textarea.medium {
 
 .sticky-workspace{
 	float:right;
-	z-index:-1;
+}
+
+.sticky-draggable-workspace{
+	z-index: -1;
 }
 
 

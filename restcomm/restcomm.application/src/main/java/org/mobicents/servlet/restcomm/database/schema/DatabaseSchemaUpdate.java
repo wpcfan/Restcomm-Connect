@@ -22,21 +22,20 @@ public class DatabaseSchemaUpdate {
     private String jdbcPassword = null;
     private File migrationScriptsFile = null;
     private String currentDB = null;
+    private String getDefaultDB ;
+
+
+
+
+
 
     public DatabaseSchemaUpdate(ServletContext context) throws Exception {
 
-        String jbossStandaloneSipXMLPath = context.getRealPath("/");
-        jbossStandaloneSipXMLPath = jbossStandaloneSipXMLPath.replace(
-                "standalone/deployments/restcomm.war/",
-                "standalone/configuration/standalone-sip.xml");
-        String restcommXMLPath = context
-                .getRealPath("WEB-INF/conf/restcomm.xml");
+        String restcommXMLPath = context.getRealPath("WEB-INF/conf/restcomm.xml");
         String mybatisXMLPath = context.getRealPath("WEB-INF/conf/mybatis.xml");
         String dbDirectoryPath = context.getRealPath("WEB-INF/data/hsql");
         XMLConfiguration mybatisXML = new XMLConfiguration(mybatisXMLPath);
         XMLConfiguration restcommXML = new XMLConfiguration(restcommXMLPath);
-        XMLConfiguration jbossStandaloneSipXML = new XMLConfiguration(
-                jbossStandaloneSipXMLPath);
 
         File hsqldbMigrationScriptsFiles = new File(
                 restcommXML
@@ -45,16 +44,15 @@ public class DatabaseSchemaUpdate {
                 restcommXML
                 .getString("dao-manager.mariadb-schema-update-scripts"));
 
-        //gets from mybatis.xml which DB to use
 
         // this set method must run before creating changelogTable
-        setDbConnectionDetails(jbossStandaloneSipXML, mybatisXML,
-                dbDirectoryPath);
+        setDbConnectionDetails( mybatisXML, dbDirectoryPath);
 
         // Set directory to check for migration script files
-        if (currentDB.equals("hsqldb")) {
+        // production is for HSQLDB set in mybatis.xml
+        if (currentDB.equalsIgnoreCase("production")) {
             migrationScriptsFile = hsqldbMigrationScriptsFiles;
-        } else if (currentDB.equals("mariadb")) {
+        } else if (currentDB.equalsIgnoreCase("mariadb")) {
             migrationScriptsFile = mariadbMigrationScriptsFiles;
 
         }
@@ -63,106 +61,78 @@ public class DatabaseSchemaUpdate {
 
     }
 
-    // get JDBC connection info from my batis.xml used for hsqldb
+
+
+
+    // get JDBC connection info from my batis.xml
     @SuppressWarnings("unchecked")
-    public void setDbConnectionDetails(XMLConfiguration jbossStandaloneSipXML,
-            XMLConfiguration mybatisXML, String dbDirectoryPath) {
+    public void setDbConnectionDetails(XMLConfiguration mybatisXML, String dbDirectoryPath) {
 
-        String mariadbEnabledCon = null;
-        String jdbcUrlCon = null;
-        String jdbcUsernameCon = null;
-        String jdbcPasswordCon = null;
-        String jdbcDriverCon = null;
+        String dbDriver = null;
+        String dbUrl = null;
+        String dbUsername = null;
+        String dbPassword = null;
 
-        // getting datasource and driver from standalone-sip.xml
+        //get the current default DB from mybatix.xml
+        getDefaultDB =  mybatisXML.getProperty("environments[@default]").toString() ;
 
-        List<HierarchicalConfiguration> list = jbossStandaloneSipXML
-                .configurationsAt("profile.subsystem");
-        int counterSubsystem = 0;
 
-        for (HierarchicalConfiguration sub : list) {
+        List<HierarchicalConfiguration> list = mybatisXML
+                .configurationsAt("environments.environment");
 
-            if (sub.getString("[@xmlns]").contains(
-                    "urn:jboss:domain:datasources")) {
-                List<HierarchicalConfiguration> listDatasources = jbossStandaloneSipXML
-                        .configurationsAt("profile.subsystem("
-                                + counterSubsystem + ").datasources.datasource");
-                List<HierarchicalConfiguration> listDrivers = jbossStandaloneSipXML
-                        .configurationsAt("profile.subsystem("
-                                + counterSubsystem
-                                + ").datasources.drivers.driver");
+        int counterDb = 0;
+        for (HierarchicalConfiguration env : list) {
 
-                // get the datasource information
-                for (HierarchicalConfiguration getListDatasources : listDatasources) {
+            logger.error("env.getString([@id]) " + env.getString("[@id]"));
 
-                    if (getListDatasources.getString("[@enabled]").equals(
-                            "true")) {
-                        jdbcUrlCon = getListDatasources
-                                .getString("connection-url");
-                        jdbcUsernameCon = getListDatasources
-                                .getString("security.user-name");
-                        jdbcPasswordCon = getListDatasources
-                                .getString("security.password");
-                        mariadbEnabledCon = getListDatasources
-                                .getString("[@enabled]");
+            if (env.getString("[@id]").equalsIgnoreCase(getDefaultDB)){
+                List<HierarchicalConfiguration> lists = mybatisXML
+                        .configurationsAt("environments.environment("
+                                + counterDb + ").dataSource.property");
+
+                for (HierarchicalConfiguration property : lists) {
+                        if(property.getString("[@name]").toString().equalsIgnoreCase("url")){
+                            dbUrl = property.getString("[@value]").toString();
+                            //expand the  ${data} path in mybatis.xml if DB is HSQLDB
+                            if (getDefaultDB.equalsIgnoreCase("production")){
+
+                                logger.error("value of Url  : " + dbUrl);
+                                logger.error("value of dbDirectoryPath : " + dbDirectoryPath);
+
+                                dbUrl = dbUrl.replace("/${data}", dbDirectoryPath);
+                            logger.error("value of Url after replace : " + dbUrl);
+                            }
+                        }else if(property.getString("[@name]").toString().equalsIgnoreCase("username")){
+                            dbUsername = property.getString("[@value]").toString();
+                            logger.error("value of dbUsername : " + dbUsername);
+                        }else if(property.getString("[@name]").toString().equalsIgnoreCase("password")){
+                            dbPassword = property.getString("[@value]").toString();
+                            logger.error("value of dbPassword : " + dbPassword);
+                        }else if(property.getString("[@name]").toString().equalsIgnoreCase("driver")){
+                            dbDriver = property.getString("[@value]").toString();
+                            }
+
+                        }
+
                     }
-                    // counterDatasource++;
-                }
-                // get the driver info
-                for (HierarchicalConfiguration getlistDrivers : listDrivers) {
-                    if (getlistDrivers.getString("[@name]").equals("mariadb")) {
-                        jdbcDriverCon = getlistDrivers
-                                .getString("xa-datasource-class");
-                    }
-                }
-            }
 
-            counterSubsystem++;
+          counterDb++;
         }
 
-        // set the DB to use to mariadb if the datasource in standalone-sip.xml
-        // file is set to true
-        if (jdbcUrlCon.contains("jdbc:mariadb".toLowerCase())
-                && mariadbEnabledCon.equals("true")) {
-            this.currentDB = "mariadb";
-            this.jdbcUrl = jdbcUrlCon;
-            this.jdbcUsername = jdbcUsernameCon;
-            this.jdbcPassword = jdbcPasswordCon;
-            this.jdbcDriver = jdbcDriverCon;
-        } else { // use HSQLDB if maria db is not set
-            String name = null;
-            String value = null;
-            List<HierarchicalConfiguration> lists = mybatisXML
-                    .configurationsAt("environments.environment.dataSource.property");
-            for (HierarchicalConfiguration sub : lists) {
-                name = sub.getString("[@name]");
-                value = sub.getString("[@value]");
-                if (name.equals("driver")) {
-                    jdbcDriverCon = value;
-                } else if (name.equals("url")) {
-                    // used to expand the ${data} from mybatix.xml
-                    value = value.replace("${data}", dbDirectoryPath);
-                    jdbcUrlCon = value;
-                } else if (name.equals("username")) {
-                    jdbcUsernameCon = value;
-                } else if (name.equals("password")) {
-                    jdbcPasswordCon = value;
-                }
-            }
-            // set db to use to hsql
-            this.currentDB = "hsqldb";
-            this.jdbcUrl = jdbcUrlCon;
-            this.jdbcUsername = jdbcUsernameCon;
-            this.jdbcPassword = jdbcPasswordCon;
-            this.jdbcDriver = jdbcDriverCon;
-        }
+            this.currentDB = getDefaultDB ;
+            this.jdbcUrl = dbUrl;
+            this.jdbcUsername = dbUsername;
+            this.jdbcPassword = dbPassword;
+            this.jdbcDriver = dbDriver;
+
     }
 
 
 
     public void createChangeLogTable(String currentDB, File migrationScriptsFile) throws Exception {
 
-        if (currentDB.equals("hsqldb")) {
+        //production is the default for HSQLDB
+        if (currentDB.equalsIgnoreCase("production")) {
             try {
                 new UpOperation().operate(new JdbcConnectionProvider(
                         jdbcDriver, jdbcUrl, jdbcUsername, jdbcPassword),
@@ -172,7 +142,7 @@ public class DatabaseSchemaUpdate {
                 logger.error("Exception changelog table created", e);
             }
         }
-        else if (currentDB.equals("mariadb")) {
+        else if (currentDB.equalsIgnoreCase("mariadb")) {
 
             try {
                 new UpOperation().operate(new JdbcConnectionProvider(

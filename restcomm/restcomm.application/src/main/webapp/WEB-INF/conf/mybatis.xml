@@ -5,6 +5,19 @@
 -->
 <configuration>
   <environments default="production">
+  
+    <environment id="mariadb">
+        <transactionManager type="JDBC" />
+        <dataSource type="POOLED">
+        <property name="driver" value="org.mariadb.jdbc.MySQLDataSource"/>
+        <property name="url" value="jdbc:mariadb://localhost:3306/restcomm"/>
+        <property name="username" value="root"/>
+        <property name="password" value=""/>
+        </dataSource>
+    </environment>
+
+ 
+  
     <environment id="production">
       <transactionManager type="JDBC"/>
       <dataSource type="POOLED">

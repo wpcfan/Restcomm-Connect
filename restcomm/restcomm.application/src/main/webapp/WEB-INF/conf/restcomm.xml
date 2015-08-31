@@ -224,8 +224,7 @@
 	</smtp>
 
 	<dao-manager class="org.mobicents.servlet.restcomm.dao.mybatis.MybatisDaoManager">
-		<configuration-file>${restcomm:home}/WEB-INF/conf/mybatis.xml
-		</configuration-file>
+		<configuration-file>${restcomm:home}/WEB-INF/conf/mybatis.xml</configuration-file>
 		<data-files>${restcomm:home}/WEB-INF/data/hsql</data-files>
 		<sql-files>${restcomm:home}/WEB-INF/sql</sql-files>
 		<hsqldb-schema-update-scripts>${restcomm:home}/WEB-INF/scripts/changelog/hsqldb</hsqldb-schema-update-scripts>

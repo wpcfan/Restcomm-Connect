@@ -30,6 +30,7 @@ import java.util.UUID;
 import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 import javax.servlet.sip.SipURI;
+import javax.servlet.sip.TelURL;
 
 import org.mobicents.servlet.restcomm.dao.ClientsDao;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
@@ -134,14 +135,25 @@ public class CallControlHelper {
      * @return
      */
     public static String getUserSipId(final SipServletRequest request, boolean useTo) {
-        final SipURI toUri;
-        final String toUser;
+        final SipURI sipToUri;
+        final TelURL telToUri;
+        String toUser = null;
         if (useTo) {
-            toUri = (SipURI) request.getTo().getURI();
-            toUser = toUri.getUser();
+            if (request.getTo().getURI() instanceof SipURI) {
+                sipToUri = (SipURI) request.getTo().getURI();
+                toUser = sipToUri.getUser();
+            } else if (request.getTo().getURI() instanceof TelURL) {
+                telToUri = (TelURL) request.getTo().getURI();
+                toUser = telToUri.getPhoneNumber();
+            }
         } else {
-            toUri = (SipURI) request.getRequestURI();
-            toUser = toUri.getUser();
+            if (request.getRequestURI() instanceof SipURI) {
+                sipToUri = (SipURI) request.getRequestURI();
+                toUser = sipToUri.getUser();
+            } else if (request.getRequestURI() instanceof TelURL) {
+                telToUri = (TelURL) request.getRequestURI();
+                toUser = telToUri.getPhoneNumber();
+            }
         }
         return toUser;
     }

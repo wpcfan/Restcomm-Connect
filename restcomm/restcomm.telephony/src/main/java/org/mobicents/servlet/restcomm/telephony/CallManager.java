@@ -48,6 +48,7 @@ import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 import javax.servlet.sip.SipSession;
 import javax.servlet.sip.SipURI;
+import javax.servlet.sip.TelURL;
 import javax.sip.message.Response;
 
 import org.apache.commons.configuration.Configuration;
@@ -299,12 +300,22 @@ public final class CallManager extends UntypedActor {
         // registered
 
         final String toUser = CallControlHelper.getUserSipId(request, useTo);
-        final String ruri = ((SipURI) request.getRequestURI()).getHost();
-        final String toHost = ((SipURI) request.getTo().getURI()).getHost();
-        final String toPort = String.valueOf(((SipURI) request.getTo().getURI()).getPort()).equalsIgnoreCase("-1") ? "5060"
-                : String.valueOf(((SipURI) request.getTo().getURI()).getHost());
-        final String transport = ((SipURI) request.getTo().getURI()).getTransportParam() == null ? "udp" : ((SipURI) request
-                .getTo().getURI()).getTransportParam();
+        String ruri = null;
+        String toHost = null;
+        String toPort = null;
+        String transport = null;
+        if (request.getRequestURI() instanceof SipURI) {
+            ruri = ((SipURI) request.getRequestURI()).getHost();
+            toHost = ((SipURI) request.getTo().getURI()).getHost();
+            toPort = String.valueOf(((SipURI) request.getTo().getURI()).getPort()).equalsIgnoreCase("-1") ? "5060"
+                    : String.valueOf(((SipURI) request.getTo().getURI()).getHost());
+            transport = ((SipURI) request.getTo().getURI()).getTransportParam() == null ? "udp" : ((SipURI) request
+                    .getTo().getURI()).getTransportParam();
+        } else if (request.getRequestURI() instanceof TelURL) {
+            ruri = ((TelURL) request.getRequestURI()).toString();
+            toHost = myHostIp;
+            toPort = null;
+        }
         SipURI outboundIntf = outboundInterface(transport);
 
         logger.info("ToHost: " + toHost);

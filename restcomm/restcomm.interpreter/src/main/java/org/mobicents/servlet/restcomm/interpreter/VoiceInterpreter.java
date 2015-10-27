@@ -230,18 +230,8 @@ public final class VoiceInterpreter extends BaseVoiceInterpreter {
         transitions.add(new Transition(acquiringCallInfo, initializingCall));
         transitions.add(new Transition(acquiringCallInfo, downloadingRcml));
         transitions.add(new Transition(acquiringCallInfo, finished));
-<<<<<<< HEAD
-<<<<<<< HEAD
-        transitions.add(new Transition(acquiringCallInfo, acquiringCallMediaGroup));
-        transitions.add(new Transition(initializingCall, acquiringCallMediaGroup));
-=======
         transitions.add(new Transition(initializingCall, downloadingRcml));
         transitions.add(new Transition(initializingCall, ready));
->>>>>>> origin/restcomm_xms
-=======
-        transitions.add(new Transition(initializingCall, downloadingRcml));
-        transitions.add(new Transition(initializingCall, ready));
->>>>>>> master
         transitions.add(new Transition(initializingCall, finishDialing));
         transitions.add(new Transition(initializingCall, hangingUp));
         transitions.add(new Transition(initializingCall, finished));

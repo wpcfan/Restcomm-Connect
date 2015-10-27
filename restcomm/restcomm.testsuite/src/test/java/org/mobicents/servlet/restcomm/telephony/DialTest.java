@@ -1,15 +1,15 @@
 package org.mobicents.servlet.restcomm.telephony;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
-import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static org.cafesip.sipunit.SipAssert.assertLastOperationSuccess;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -60,7 +60,6 @@ import org.mobicents.servlet.restcomm.telephony.security.DigestServerAuthenticat
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import gov.nist.javax.sip.message.MessageExt;
@@ -446,6 +445,15 @@ public class DialTest {
     @Test
     public synchronized void testDialUriBobHangup() throws InterruptedException, ParseException {
         deployer.deploy("DialTest");
+        
+        int initialCdrSize = 0;
+        
+        //Check CDR
+        JsonObject cdrs = RestcommCallsTool.getInstance().getCalls("http://127.0.0.1:8080/restcomm", adminAccountSid, adminAuthToken);
+        if (cdrs != null) {
+            initialCdrSize = cdrs.get("calls").getAsJsonArray().size();
+        }
+        
 
         // Phone2 register as alice
         SipURI uri = aliceSipStack.getAddressFactory().createSipURI(null, "127.0.0.1:5080");
@@ -500,16 +508,24 @@ public class DialTest {
         Thread.sleep(3000);
 
         //Check CDR
-        JsonObject cdrs = RestcommCallsTool.getInstance().getCalls("http://127.0.0.1:8080/restcomm", adminAccountSid, adminAuthToken);
+        cdrs = RestcommCallsTool.getInstance().getCalls("http://127.0.0.1:8080/restcomm", adminAccountSid, adminAuthToken);
         assertNotNull(cdrs);
         JsonArray cdrsArray = cdrs.get("calls").getAsJsonArray();
         System.out.println("cdrsArray.size(): "+cdrsArray.size());
-        assertTrue(cdrsArray.size() == 2);
+        assertTrue((cdrsArray.size() - initialCdrSize )== 2);
     }
 
     @Test
     public synchronized void testDialUriBobHangupCheckCDRs() throws InterruptedException, ParseException {
         deployer.deploy("DialTest");
+        
+        int initialCdrSize = 0;
+        
+        //Check CDR
+        JsonObject cdrs = RestcommCallsTool.getInstance().getCalls("http://127.0.0.1:8080/restcomm", adminAccountSid, adminAuthToken);
+        if (cdrs != null) {
+            initialCdrSize = cdrs.get("calls").getAsJsonArray().size();
+        }
 
         // Phone2 register as alice
         SipURI uri = aliceSipStack.getAddressFactory().createSipURI(null, "127.0.0.1:5080");
@@ -564,17 +580,17 @@ public class DialTest {
         Thread.sleep(3000);
 
         //Check CDR
-        JsonObject cdrs = RestcommCallsTool.getInstance().getCalls("http://127.0.0.1:8080/restcomm", adminAccountSid, adminAuthToken);
+        cdrs = RestcommCallsTool.getInstance().getCalls("http://127.0.0.1:8080/restcomm", adminAccountSid, adminAuthToken);
         assertNotNull(cdrs);
         JsonArray cdrsArray = cdrs.get("calls").getAsJsonArray();
-        assertTrue(((JsonObject)cdrsArray.get(0)).get("duration").getAsInt() == 8);
-        assertTrue(((JsonObject)cdrsArray.get(1)).get("duration").getAsInt() == 8);
-        if (((JsonObject)cdrsArray.get(0)).get("direction").getAsString().equalsIgnoreCase("inbound")) {
-            assertTrue(((JsonObject)cdrsArray.get(0)).get("sid").getAsString().equals(((JsonObject)cdrsArray.get(1)).get("parent_call_sid").getAsString()));
+        assertTrue(((JsonObject)cdrsArray.get(cdrsArray.size()-2)).get("duration").getAsInt() == 8);
+        assertTrue(((JsonObject)cdrsArray.get(cdrsArray.size()-1)).get("duration").getAsInt() == 8);
+        if (((JsonObject)cdrsArray.get(initialCdrSize)).get("direction").getAsString().equalsIgnoreCase("inbound")) {
+            assertTrue(((JsonObject)cdrsArray.get(initialCdrSize)).get("sid").getAsString().equals(((JsonObject)cdrsArray.get(initialCdrSize+1)).get("parent_call_sid").getAsString()));
         } else {
-            assertTrue(((JsonObject)cdrsArray.get(1)).get("sid").getAsString().equals(((JsonObject)cdrsArray.get(0)).get("parent_call_sid").getAsString()));
+            assertTrue(((JsonObject)cdrsArray.get(initialCdrSize+1)).get("sid").getAsString().equals(((JsonObject)cdrsArray.get(initialCdrSize)).get("parent_call_sid").getAsString()));
         }
-        assertTrue(cdrsArray.size() == 2);
+        assertTrue((cdrsArray.size() - initialCdrSize) == 2);
     }
     
     @Test
@@ -629,8 +645,10 @@ public class DialTest {
         }
     }
     
-<<<<<<< HEAD
-    @Test @Ignore //Because of https://github.com/Mobicents/sipunit/issues/4
+
+
+    @Test @Ignore //Ignore because of issue: https://github.com/Mobicents/sipunit/issues/4
+
     public synchronized void testDialClientAliceTCP() throws InterruptedException, ParseException {
         deployer.deploy("DialTest");
         aliceTcpPhone.setLoopback(true);
@@ -686,65 +704,12 @@ public class DialTest {
     }
     
     //Test for issue RESTCOMM-617
+<<<<<<< HEAD
 =======
 >>>>>>> origin/restcomm_xms
+=======
+>>>>>>> master
     @Test
-    public synchronized void testDialClientAliceTCP() throws InterruptedException, ParseException {
-        deployer.deploy("DialTest");
-        aliceTcpPhone.setLoopback(true);
-        
-        // Phone2 register as alice
-        SipURI uri = aliceTcpSipStack.getAddressFactory().createSipURI(null, "127.0.0.1:5080");
-        assertTrue(aliceTcpPhone.register(uri, "alice", "1234", aliceTcpContact, 3600, 3600));
-        
-        // Prepare second phone to receive call
-        SipCall aliceCall = aliceTcpPhone.createSipCall();
-        aliceCall.listenForIncomingCall();
-
-        // Create outgoing call with first phone
-        final SipCall bobCall = bobPhone.createSipCall();
-        bobCall.initiateOutgoingCall(bobContact, dialClient, null, body, "application", "sdp", null, null);
-        assertLastOperationSuccess(bobCall);
-        assertTrue(bobCall.waitOutgoingCallResponse(5 * 1000));
-        final int response = bobCall.getLastReceivedResponse().getStatusCode();
-        assertTrue(response == Response.TRYING || response == Response.RINGING);
-
-        if (response == Response.TRYING) {
-            assertTrue(bobCall.waitOutgoingCallResponse(5 * 1000));
-            assertEquals(Response.RINGING, bobCall.getLastReceivedResponse().getStatusCode());
-        }
-
-        assertTrue(bobCall.waitOutgoingCallResponse(5 * 1000));
-        assertEquals(Response.OK, bobCall.getLastReceivedResponse().getStatusCode());
-
-        bobCall.sendInviteOkAck();
-        assertTrue(!(bobCall.getLastReceivedResponse().getStatusCode() >= 400));
-
-        aliceCall.listenForIncomingCall();
-        assertTrue(aliceCall.waitForIncomingCall(60 * 1000));
-        System.out.println("!!!!!!!!! Exception: "+aliceCall.getException());
-        assertTrue(aliceCall.sendIncomingCallResponse(Response.RINGING, "Ringing-Alice", 3600));
-        String receivedBody = new String(aliceCall.getLastReceivedRequest().getRawContent());
-        assertTrue(aliceCall.sendIncomingCallResponse(Response.OK, "OK-Alice", 3600, receivedBody, "application", "sdp", null,
-                null));
-        assertTrue(aliceCall.waitForAck(50 * 1000));
-
-        Thread.sleep(3000);
-
-        // hangup.
-        bobCall.disconnect();
-
-        aliceCall.listenForDisconnect();
-        assertTrue(aliceCall.waitForDisconnect(30 * 1000));
-        try {
-            Thread.sleep(10 * 1000);
-        } catch (final InterruptedException exception) {
-            exception.printStackTrace();
-        }
-    }
-    
-    //Test for issue RESTCOMM-617
-    @Test @Ignore //Because of https://github.com/Mobicents/sipunit/issues/4
     public synchronized void testDialClientAliceToBigDID() throws InterruptedException, ParseException {
         deployer.deploy("DialTest");
 

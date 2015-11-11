@@ -126,7 +126,9 @@ public final class Call extends UntypedActor {
     private final State canceling;
     private final State canceled;
     private final State failingNoAnswer;
+    private final State failingForbidden;
     private final State noAnswer;
+    private final State forbidden;
     private final State dialing;
     private final State updatingMediaSession;
     private final State inProgress;
@@ -200,7 +202,9 @@ public final class Call extends UntypedActor {
         this.canceling = new State("canceling", new Canceling(source), null);
         this.canceled = new State("canceled", new Canceled(source), null);
         this.failingNoAnswer = new State("failing no answer", new FailingNoAnswer(source), null);
+        this.failingForbidden = new State("failing forbidden", new FailingForbidden(source), null);
         this.noAnswer = new State("no answer", new NoAnswer(source), null);
+        this.forbidden = new State("forbidden", new Forbidden(source), null);
         this.dialing = new State("dialing", new Dialing(source), null);
         this.updatingMediaSession = new State("updating media session", new UpdatingMediaSession(source), null);
         this.inProgress = new State("in progress", new InProgress(source), null);
@@ -234,6 +238,7 @@ public final class Call extends UntypedActor {
         transitions.add(new Transition(this.dialing, this.canceling));
         transitions.add(new Transition(this.dialing, this.stopping));
         transitions.add(new Transition(this.dialing, this.failingBusy));
+        transitions.add(new Transition(this.dialing, this.failingForbidden));
         transitions.add(new Transition(this.dialing, this.ringing));
         transitions.add(new Transition(this.dialing, this.updatingMediaSession));
         transitions.add(new Transition(this.inProgress, this.stopping));
@@ -249,6 +254,7 @@ public final class Call extends UntypedActor {
         transitions.add(new Transition(this.failingBusy, this.busy));
         transitions.add(new Transition(this.failingNoAnswer, this.noAnswer));
         transitions.add(new Transition(this.failingNoAnswer, this.canceling));
+        transitions.add(new Transition(this.failingForbidden, this.forbidden));
         transitions.add(new Transition(this.updatingMediaSession, this.inProgress));
         transitions.add(new Transition(this.updatingMediaSession, this.failed));
         transitions.add(new Transition(this.stopping, this.completed));
@@ -738,6 +744,12 @@ public final class Call extends UntypedActor {
         }
     }
 
+    private final class FailingForbidden extends Failing {
+        public FailingForbidden(final ActorRef source) {
+            super(source);
+        }
+    }
+
     private final class Busy extends AbstractAction {
 
         public Busy(final ActorRef source) {
@@ -820,6 +832,28 @@ public final class Call extends UntypedActor {
             // invite.getApplicationSession().invalidate();
             // Notify the observers.
             external = CallStateChanged.State.NO_ANSWER;
+            final CallStateChanged event = new CallStateChanged(external);
+            for (final ActorRef observer : observers) {
+                observer.tell(event, source);
+            }
+
+            // Record call data
+            if (outgoingCallRecord != null && isOutbound()) {
+                outgoingCallRecord = outgoingCallRecord.setStatus(external.name());
+                recordsDao.updateCallDetailRecord(outgoingCallRecord);
+            }
+        }
+    }
+
+    private final class Forbidden extends AbstractAction {
+        public Forbidden(final ActorRef source) {
+            super(source);
+        }
+
+        @Override
+        public void execute(Object message) throws Exception {
+            // Notify the observers
+            external = CallStateChanged.State.FORBIDDEN;
             final CallStateChanged event = new CallStateChanged(external);
             for (final ActorRef observer : observers) {
                 observer.tell(event, source);
@@ -1276,6 +1310,10 @@ public final class Call extends UntypedActor {
                 }
                 break;
             }
+            case SipServletResponse.SC_FORBIDDEN:
+                sendCallInfoToObservers();
+                fsm.transition(message, failingForbidden);
+                break;
             case SipServletResponse.SC_UNAUTHORIZED:
             case SipServletResponse.SC_PROXY_AUTHENTICATION_REQUIRED: {
                 // Handles Auth for https://bitbucket.org/telestax/telscale-restcomm/issue/132/implement-twilio-sip-out
@@ -1481,6 +1519,8 @@ public final class Call extends UntypedActor {
                     fsm.transition(message, busy);
                 } else if (is(failingNoAnswer)) {
                     fsm.transition(message, noAnswer);
+                } else if (is(failingForbidden)) {
+                    fsm.transition(message, forbidden);
                 }
                 break;
 

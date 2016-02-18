@@ -217,7 +217,7 @@ public abstract class AccountsEndpoint extends AccountsEndpointBase {
         } catch(final AuthorizationException exception) {
             return status(UNAUTHORIZED).build();
         }
-        final Account account = userIdentityContext.getEffectiveAccount(); // uses either oauth token or APIKey specified account
+        final Account account = userIdentityContext.getEffectiveAccount(); // uses either identity token or APIKey specified account
         if (account == null) {
             return status(NOT_FOUND).build();
         } else {

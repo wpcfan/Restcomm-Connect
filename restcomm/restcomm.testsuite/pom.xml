@@ -26,6 +26,13 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.identity</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
 		<!-- <dependency> <groupId>com.telestax.servlet</groupId> <artifactId>restcomm.application</artifactId> 
 			<version>${project.version}</version> <type>war</type> <scope>test</scope> 
 			</dependency> <dependency> <groupId>com.telestax.servlet</groupId> <artifactId>restcomm.commons</artifactId> 

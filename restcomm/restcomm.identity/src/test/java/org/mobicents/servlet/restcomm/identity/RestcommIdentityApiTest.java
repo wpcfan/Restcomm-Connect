@@ -20,8 +20,6 @@
 
 package org.mobicents.servlet.restcomm.identity;
 
-import static org.junit.Assert.*;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -43,7 +41,7 @@ import java.io.IOException;
  */
 public class RestcommIdentityApiTest {
 
-    static String authServerBaseUrl = IdentityTestTool.AUTH_SERVER_BASE_URL;
+    static String authServerBaseUrl = IdentityRealmTestTool.AUTH_SERVER_BASE_URL;
     static String username = "administrator@company.com";
     static String password = "RestComm";
     static String realm = "restcomm";
@@ -51,13 +49,13 @@ public class RestcommIdentityApiTest {
     static RestcommIdentityApi api;
     static String instanceId;
 
-    private static IdentityTestTool tool;
+    private static IdentityRealmTestTool tool;
 
     public RestcommIdentityApiTest() {}
 
     @BeforeClass
     public static void createInstance() throws RestcommIdentityApiException, IOException {
-        tool = new IdentityTestTool();
+        tool = new IdentityRealmTestTool();
         tool.importRealm("simple-identity-instance-realm.json");
         api = new RestcommIdentityApi(authServerBaseUrl, username, password, realm, null);
         instanceId = api.createInstance(new String[] {"http://localhost","https://localhost"}, "my-secret").instanceId;

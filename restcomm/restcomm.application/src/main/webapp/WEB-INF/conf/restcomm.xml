@@ -311,7 +311,7 @@
 			<!-- Restcomm account that will become Administrator when instance is registered.
 				if not provided, no Restcomm account will be linked to the user that does the migration . -->
 			<admin-account-sid>ACae6e420f425248d6a26948c17a9e2acf</admin-account-sid>
-			<!-- Url base that will be allowed to redirect to when going through the oauth workflow. Typically,
+			<!-- Url base that will be allowed to redirect to when going through the identity workflow. Typically,
 			 	 the base (scheme://host:port) of the url used for accessing AdminUI or RVD in your premise should be ok. -->
 			<redirect-uris>http://127.0.0.1:8080</redirect-uris>
 			<!-- Use the following existing instance id instead of creating new identity instance in auth server.

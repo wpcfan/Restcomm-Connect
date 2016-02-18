@@ -6,7 +6,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mobicents.servlet.restcomm.entities.Account;
 import org.mobicents.servlet.restcomm.entities.Sid;
-import org.mobicents.servlet.restcomm.identity.IdentityTestTool;
+import org.mobicents.servlet.restcomm.identity.IdentityRealmTool;
 import org.mobicents.servlet.restcomm.identity.RestcommIdentityApi;
 import org.mobicents.servlet.restcomm.identity.RestcommIdentityApi.RestcommIdentityApiException;
 import org.mobicents.servlet.restcomm.identity.RestcommIdentityApi.UserEntity;
@@ -18,14 +18,14 @@ import static org.junit.Assert.*;
 
 public class IdentityMigrationToolTest {
 
-    static String authServerBaseUrl = IdentityTestTool.AUTH_SERVER_BASE_URL;
+    static String authServerBaseUrl = IdentityRealmTool.AUTH_SERVER_BASE_URL;
     static String username = "administrator@company.com";
     static String password = "RestComm";
     static String realm = "restcomm";
 
     static RestcommIdentityApi api;
     //static String mainInstanceId;
-    static IdentityTestTool tool;
+    static IdentityRealmTool tool;
 
 
     public IdentityMigrationToolTest() {
@@ -35,7 +35,7 @@ public class IdentityMigrationToolTest {
     @BeforeClass
     public static void setup() throws RestcommIdentityApiException, IOException {
         // create realm
-        tool = new IdentityTestTool();
+        tool = new IdentityRealmTool();
         tool.importRealm("simple-identity-instance-realm.json");
         // create api
         api = new RestcommIdentityApi(authServerBaseUrl, username, password, realm, null);

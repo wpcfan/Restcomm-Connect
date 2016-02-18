@@ -20,18 +20,13 @@
 
 package org.mobicents.servlet.restcomm.identity;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
-import junit.framework.Assert;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.NotImplementedException;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -41,52 +36,47 @@ import java.io.InputStream;
 /**
  * Utility class that handles setup/teardown of a keycloak instance.
  *
+ * It's used both in restcomm.identity and restcomm.testsuite maven projects
+ * for testing.
+ *
  * Requirements:
  *      - admin account in master realm
  *      - existence of an app/client with Direct Grants enabled
  *
  * @author Orestis Tsakiridis
  */
-public class IdentityTestTool {
-    public static String AUTH_SERVER_BASE_URL = "http://127.0.0.1:8081";
-    static String MASTER_ADMIN_USERNAME = "admin"; // administrator user for the master realm
-    static String MASTER_ADMIN_PASSWORD = "admin";
-    static String KEYCLOAK_CLIENT_ID = "keycloak-test"; // this keycloak client is used initialy to get a token for admin
-    static String KEYCLOAK_CLIENT_SECRET = "c2e4d5df-47a0-49fb-b321-8d8b0eb81351"; // this is the default secret
-
+public class IdentityRealmTool {
     private String token;
 
     private String authServerBaseUrl;
     private String adminUsername;
     private String adminPassword;
+    private String keycloakClientId;
+    private String keycloakClientSecret;
 
-    public IdentityTestTool(String authServerBaseUrl, String adminUsername, String adminPassword) {
+    public IdentityRealmTool(String authServerBaseUrl, String adminUsername, String adminPassword, String keycloakClientId, String keycloakClientSecret) {
         this.authServerBaseUrl = authServerBaseUrl;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
-    }
-
-    public IdentityTestTool() {
-        this.authServerBaseUrl = AUTH_SERVER_BASE_URL;
-        this.adminUsername = MASTER_ADMIN_USERNAME;
-        this.adminPassword = MASTER_ADMIN_PASSWORD;
+        this.keycloakClientId = keycloakClientId;
+        this.keycloakClientSecret = keycloakClientSecret;
     }
 
     public String getToken() {
         if (this.token == null) {
             Client jerseyClient = Client.create();
-            jerseyClient.addFilter(new HTTPBasicAuthFilter(KEYCLOAK_CLIENT_ID, KEYCLOAK_CLIENT_SECRET));
+            jerseyClient.addFilter(new HTTPBasicAuthFilter(keycloakClientId, keycloakClientSecret));
             WebResource webResource = jerseyClient.resource(authServerBaseUrl + "/auth/realms/master/protocol/openid-connect/token");
             MultivaluedMap params = new MultivaluedMapImpl();
             params.add("username", adminUsername);
             params.add("password", adminPassword);
             params.add("grant_type", "password");
-            params.add("client_id", KEYCLOAK_CLIENT_ID);
+            params.add("client_id", keycloakClientId);
             String response = webResource.type(MediaType.APPLICATION_FORM_URLENCODED_TYPE).accept(MediaType.APPLICATION_JSON).post(String.class, params);
             JsonParser parser = new JsonParser();
             JsonObject jsonResponse = parser.parse(response).getAsJsonObject();
             String token = jsonResponse.getAsJsonPrimitive("access_token").getAsString();
-            //System.out.println("Using oauth token: " + token);
+            //System.out.println("Using identity token: " + token);
 
             this.token = token;
         }
@@ -111,29 +101,4 @@ public class IdentityTestTool {
         WebResource webResource = jerseyClient.resource(authServerBaseUrl + "/auth/admin/realms/restcomm");
         webResource.header("Authorization", "Bearer " + token).delete();
     }
-
-    /**
-     * Check if a role is inside the mappings.
-     *
-     * @param element
-     * @param role
-     * @param type This should be "realm" or "client".
-     * @return
-     */
-    public static boolean roleMappingsContainRole(JsonElement element, String role, String instanceId, String type) {
-        if ("client".equals(type)) {
-            JsonElement mappingsElement = element.getAsJsonObject().get("clientMappings").getAsJsonObject().get(instanceId + "-restcomm-rest").getAsJsonObject().get("mappings").getAsJsonArray();
-            Assert.assertNotNull(mappingsElement);
-            JsonArray mappingsArray = mappingsElement.getAsJsonArray();
-            Assert.assertTrue(mappingsArray.size() > 0);
-            boolean developerRoleFound = false;
-            for (int i = 0; i < mappingsArray.size(); i++) {
-                if (role.equals(mappingsArray.get(i).getAsJsonObject().get("name").getAsString()))
-                    return true;
-            }
-            return false;
-        }
-        throw new NotImplementedException();
-    }
-
 }

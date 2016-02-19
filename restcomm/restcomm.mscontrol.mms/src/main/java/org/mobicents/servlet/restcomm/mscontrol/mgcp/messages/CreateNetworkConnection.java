@@ -27,8 +27,18 @@ package org.mobicents.servlet.restcomm.mscontrol.mgcp.messages;
  */
 public final class CreateNetworkConnection {
 
+    private final String sessionDescription;
+
+    public CreateNetworkConnection(String sessionDescription) {
+        this.sessionDescription = sessionDescription;
+    }
+
     public CreateNetworkConnection() {
-        super();
+        this("");
+    }
+
+    public String getSessionDescription() {
+        return sessionDescription;
     }
 
 }

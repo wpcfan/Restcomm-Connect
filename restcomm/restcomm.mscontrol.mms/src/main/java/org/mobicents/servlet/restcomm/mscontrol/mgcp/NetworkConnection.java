@@ -21,6 +21,9 @@
 
 package org.mobicents.servlet.restcomm.mscontrol.mgcp;
 
+import jain.protocol.ip.mgcp.message.parms.ConnectionDescriptor;
+import jain.protocol.ip.mgcp.message.parms.ConnectionMode;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -31,10 +34,14 @@ import org.mobicents.servlet.restcomm.fsm.FiniteStateMachine;
 import org.mobicents.servlet.restcomm.fsm.State;
 import org.mobicents.servlet.restcomm.fsm.Transition;
 import org.mobicents.servlet.restcomm.mgcp.ConnectionStateChanged;
+import org.mobicents.servlet.restcomm.mgcp.CreateBridgeEndpoint;
+import org.mobicents.servlet.restcomm.mgcp.CreateConnection;
 import org.mobicents.servlet.restcomm.mgcp.EndpointStateChanged;
+import org.mobicents.servlet.restcomm.mgcp.InitializeConnection;
 import org.mobicents.servlet.restcomm.mgcp.LinkStateChanged;
 import org.mobicents.servlet.restcomm.mgcp.MediaGatewayResponse;
 import org.mobicents.servlet.restcomm.mgcp.MediaSession;
+import org.mobicents.servlet.restcomm.mgcp.OpenConnection;
 import org.mobicents.servlet.restcomm.mscontrol.messages.CloseConnection;
 import org.mobicents.servlet.restcomm.mscontrol.messages.Join;
 import org.mobicents.servlet.restcomm.mscontrol.messages.Leave;
@@ -67,7 +74,9 @@ public class NetworkConnection extends UntypedActor {
     // Media Components
     private final ActorRef gateway;
     private final MediaSession session;
-    private final ActorRef endpoint;
+    private ActorRef endpoint;
+    private ActorRef connection;
+    private ActorRef link;
 
     // Finite State Machine
     private final FiniteStateMachine fsm;
@@ -89,17 +98,21 @@ public class NetworkConnection extends UntypedActor {
 
     // Call State
     private final List<ActorRef> observers;
+    private volatile boolean outbound;
+    private volatile boolean webrtc;
     private volatile boolean joined;
     private volatile boolean close;
+    private String localDescription;
+    private String remoteDescription;
 
-    public NetworkConnection(final ActorRef gateway, final MediaSession session, final ActorRef endpoint) {
+    public NetworkConnection(final ActorRef gateway, final MediaSession session) {
         super();
         final ActorRef source = self();
 
         // Media Components
         this.gateway = gateway;
         this.session = session;
-        this.endpoint = endpoint;
+        this.endpoint = null;
 
         // Finite State Machine
         this.uninitialized = new State("uninitialized", null);
@@ -153,8 +166,12 @@ public class NetworkConnection extends UntypedActor {
 
         // Call State
         this.observers = new ArrayList<ActorRef>(3);
+        this.outbound = false;
+        this.webrtc = false;
         this.joined = false;
         this.close = false;
+        this.localDescription = "";
+        this.remoteDescription = "";
     }
 
     @Override
@@ -237,24 +254,59 @@ public class NetworkConnection extends UntypedActor {
         }
     }
 
-    private void onCreateNetworkConnection(CreateNetworkConnection message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
+    private void onCreateNetworkConnection(CreateNetworkConnection message, ActorRef self, ActorRef sender) throws Exception {
+        if (is(uninitialized)) {
+            this.remoteDescription = message.getSessionDescription();
+            this.fsm.transition(message, acquiringBridge);
+        }
 
     }
 
-    private void onMediaGatewayResponse(MediaGatewayResponse<?> message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
+    private void onMediaGatewayResponse(MediaGatewayResponse<?> message, ActorRef self, ActorRef sender) throws Exception {
+        if (is(acquiringBridge)) {
+            this.endpoint = (ActorRef) message.get();
+            this.endpoint.tell(new Observe(self), self);
+            this.fsm.transition(message, acquiringConnection);
+        } else if (is(acquiringConnection)) {
+            this.connection = (ActorRef) message.get();
+            this.connection.tell(new Observe(self), self);
+            this.fsm.transition(message, initializingConnection);
+        }
     }
 
-    private void onConnectionStateChanged(ConnectionStateChanged message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
+    private void onConnectionStateChanged(ConnectionStateChanged message, ActorRef self, ActorRef sender) throws Exception {
+        switch (message.state()) {
+            case CLOSED:
+                if (is(initializingConnection)) {
+                    this.fsm.transition(message, openingConnection);
+                } else if(is(openingConnection)) {
+                    this.fsm.transition(message, failed);
+                }
+                break;
 
+            case HALF_OPEN:
+                if(is(openingConnection)) {
+                    this.fsm.transition(message, pending);
+                }
+                break;
+
+            case OPEN:
+                if(is(openingConnection) || is(updatingConnection)) {
+                    this.fsm.transition(message, active);
+                }
+                break;
+
+            default:
+                logger.warning("Unknown connection state: " + message.state().name());
+                break;
+        }
     }
 
-    private void onUpdateMediaSession(UpdateMediaSession message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
+    private void onUpdateMediaSession(UpdateMediaSession message, ActorRef self, ActorRef sender) throws Exception {
+        if(is(active)) {
+            this.remoteDescription = message.getSessionDescription();
+            this.fsm.transition(message, updatingConnection);
+        }
     }
 
     private void onJoin(Join message, ActorRef self, ActorRef sender) {
@@ -298,13 +350,11 @@ public class NetworkConnection extends UntypedActor {
 
         public AcquiringBridge(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            gateway.tell(new CreateBridgeEndpoint(session), source);
         }
 
     }
@@ -313,13 +363,11 @@ public class NetworkConnection extends UntypedActor {
 
         public AcquiringConnection(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            gateway.tell(new CreateConnection(session), source);
         }
 
     }
@@ -328,13 +376,11 @@ public class NetworkConnection extends UntypedActor {
 
         public InitializingConnection(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            connection.tell(new InitializeConnection(endpoint), source);
         }
 
     }
@@ -343,13 +389,13 @@ public class NetworkConnection extends UntypedActor {
 
         public OpeningConnection(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            ConnectionDescriptor descriptor = outbound ? new ConnectionDescriptor(remoteDescription) : null;
+            OpenConnection openConnection = new OpenConnection(descriptor, ConnectionMode.SendRecv, webrtc);
+            connection.tell(openConnection, super.source);
         }
 
     }

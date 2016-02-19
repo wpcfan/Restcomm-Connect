@@ -279,19 +279,19 @@ public class NetworkConnection extends UntypedActor {
             case CLOSED:
                 if (is(initializingConnection)) {
                     this.fsm.transition(message, openingConnection);
-                } else if(is(openingConnection)) {
+                } else if (is(openingConnection)) {
                     this.fsm.transition(message, failed);
                 }
                 break;
 
             case HALF_OPEN:
-                if(is(openingConnection)) {
+                if (is(openingConnection)) {
                     this.fsm.transition(message, pending);
                 }
                 break;
 
             case OPEN:
-                if(is(openingConnection) || is(updatingConnection)) {
+                if (is(openingConnection) || is(updatingConnection)) {
                     this.fsm.transition(message, active);
                 }
                 break;
@@ -303,29 +303,62 @@ public class NetworkConnection extends UntypedActor {
     }
 
     private void onUpdateMediaSession(UpdateMediaSession message, ActorRef self, ActorRef sender) throws Exception {
-        if(is(active)) {
+        if (is(active)) {
             this.remoteDescription = message.getSessionDescription();
             this.fsm.transition(message, updatingConnection);
         }
     }
 
-    private void onJoin(Join message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
+    private void onJoin(Join message, ActorRef self, ActorRef sender) throws Exception {
+        if (is(active)) {
+            if (joined) {
+                logger.warning("Ignoring Join message because the call is already joined.");
+            } else {
+                this.fsm.transition(message, acquiringLink);
+            }
+        }
+    }
+
+    private void onLeave(Leave message, ActorRef self, ActorRef sender) throws Exception {
+        if (is(active)) {
+            if (joined) {
+                this.fsm.transition(message, closingLink);
+            } else {
+                logger.warning("Ignoring Leave message because the call is not joined.");
+            }
+        }
+    }
+
+    private void onLinkStateChanged(LinkStateChanged message, ActorRef self, ActorRef sender) throws Exception {
+        switch (message.state()) {
+            case CLOSED:
+                if (is(initializingLink)) {
+                    this.fsm.transition(message, openingLink);
+                } else if (is(openingLink)) {
+                    this.fsm.transition(message, closing);
+                } else if (is(closingLink)) {
+                    this.fsm.transition(message, active);
+                }
+                break;
+
+            case OPEN:
+                if (is(openingLink)) {
+                    this.fsm.transition(message, active);
+                }
+                break;
+
+            default:
+                logger.warning("Unknown link state: " + message.state().name());
+                break;
+        }
 
     }
 
-    private void onLeave(Leave message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
-    }
-
-    private void onLinkStateChanged(LinkStateChanged message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
-    }
-
-    private void onCloseConnection(CloseConnection message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
+    private void onCloseConnection(CloseConnection message, ActorRef self, ActorRef sender) throws Exception {
+        if (is(acquiringBridge) || is(acquiringConnection) || is(initializingConnection)) {
+            this.fsm.transition(message, closed);
+        }
+        // TODO Finish here!!!
 
     }
 

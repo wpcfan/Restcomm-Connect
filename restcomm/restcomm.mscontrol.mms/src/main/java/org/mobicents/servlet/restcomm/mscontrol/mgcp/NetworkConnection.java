@@ -41,6 +41,7 @@ import org.mobicents.servlet.restcomm.mscontrol.messages.Leave;
 import org.mobicents.servlet.restcomm.mscontrol.messages.UpdateMediaSession;
 import org.mobicents.servlet.restcomm.mscontrol.mgcp.messages.CreateNetworkConnection;
 import org.mobicents.servlet.restcomm.patterns.Observe;
+import org.mobicents.servlet.restcomm.patterns.Observing;
 import org.mobicents.servlet.restcomm.patterns.StopObserving;
 
 import akka.actor.ActorRef;
@@ -51,8 +52,7 @@ import akka.event.LoggingAdapter;
 /**
  * Represents an MGCP-based implementation of a JSR309 NetworkConnection actor.
  * <p>
- * The NetworkConnection actor is responsible for managing a Bridge endpoint and a Media Group, as well as any links between
- * them.
+ * The NetworkConnection actor is responsible for managing a Bridge endpoint and its links between other endpoints.
  * <p>
  * It is also responsible for establishing the RTP connection with remote peer via SDP negotiation.
  * </p>
@@ -190,7 +190,30 @@ public class NetworkConnection extends UntypedActor {
         } else if (EndpointStateChanged.class.equals(klass)) {
             onEndpointStateChanged((EndpointStateChanged) message, self, sender);
         }
+    }
 
+    /**
+     * Checks whether the actor is currently in a certain state.
+     *
+     * @param state The state to be checked
+     * @return Returns true if the actor is currently in the state. Returns false otherwise.
+     */
+    private boolean is(State state) {
+        return this.fsm.state().equals(state);
+    }
+
+    /**
+     * Broadcasts a message to all registered observers.
+     * 
+     * @param message The message to be broadcast
+     */
+    private void broadcast(final Object message) {
+        if (!this.observers.isEmpty()) {
+            final ActorRef self = self();
+            for (ActorRef observer : observers) {
+                observer.tell(message, self);
+            }
+        }
     }
 
     /*
@@ -198,13 +221,20 @@ public class NetworkConnection extends UntypedActor {
      */
 
     private void onObserve(Observe message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
+        final ActorRef observer = message.observer();
+        if (observer != null) {
+            synchronized (this.observers) {
+                this.observers.add(observer);
+                observer.tell(new Observing(self), self);
+            }
+        }
     }
 
     private void onStopObserving(StopObserving message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
+        final ActorRef observer = message.observer();
+        if (observer != null) {
+            this.observers.remove(observer);
+        }
     }
 
     private void onCreateNetworkConnection(CreateNetworkConnection message, ActorRef self, ActorRef sender) {

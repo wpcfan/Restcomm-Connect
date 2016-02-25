@@ -157,7 +157,7 @@ public class AccountsEndpointOauthTest {
         Assert.assertEquals("FAILED: account linking to unlinked@company.com user executed by admin", 200, response.getStatus());
         // access newlly created account/user. Request a new token.
         api = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "unlinked@company.com", "RestComm", "restcomm", null);
-        token = adminApi.getTokenString();
+        token = api.getTokenString();
         response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/" + unlinkedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
         Assert.assertEquals("FAILED: user unlinked@company.com should be able to access his account after linking", 200, response.getStatus());
 

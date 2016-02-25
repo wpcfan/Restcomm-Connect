@@ -6,6 +6,7 @@
   "publicKey" : "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmnekczL6HB4bVVBJOnxOxJHHIktTzKMIwCTE1BuO7mrc5lB3ij3XSZGcCkN6CUK7lHo6bo1Gjl/YC8UhO7q56NHtgvVyhkOL3xOakkxMgHC6qfOb6tG/tMUMncPXAMDYz/2raVRh1WjNuHgnPNiiWNeNhG/3nACoR2b9OJR49nxftjfr0c3rc/rQb1LEYGgD0u6UYA/HvenyedmofdJMMflzUYvKAHAWebeyKTk10GFi+LVpbpVT922t+e9owcYqfGPgddkcfNsHzAmxUgIfO1WFzeMEmXzv5oxBbhx6hM4EK+9jzcpIJ03Fo6c5+ZYHWFpjKhJoj7xBFJo/qUzZpwIDAQAB",
   "certificate" : "MIICnzCCAYcCBgFRXhKFCTANBgkqhkiG9w0BAQsFADATMREwDwYDVQQDDAhyZXN0Y29tbTAeFw0xNTEyMDExNTAyMzBaFw0yNTEyMDExNTA0MTBaMBMxETAPBgNVBAMMCHJlc3Rjb21tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmnekczL6HB4bVVBJOnxOxJHHIktTzKMIwCTE1BuO7mrc5lB3ij3XSZGcCkN6CUK7lHo6bo1Gjl/YC8UhO7q56NHtgvVyhkOL3xOakkxMgHC6qfOb6tG/tMUMncPXAMDYz/2raVRh1WjNuHgnPNiiWNeNhG/3nACoR2b9OJR49nxftjfr0c3rc/rQb1LEYGgD0u6UYA/HvenyedmofdJMMflzUYvKAHAWebeyKTk10GFi+LVpbpVT922t+e9owcYqfGPgddkcfNsHzAmxUgIfO1WFzeMEmXzv5oxBbhx6hM4EK+9jzcpIJ03Fo6c5+ZYHWFpjKhJoj7xBFJo/qUzZpwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAeMSRVNgCexNdfOFfHsWLX1WxnADBVXmFeN2lkICcn8osv/l7YZBEspiUVN4qGIRlOqwVaPN0m9tzinkjx+LA1p5u0z0fBn6n8zTb+xR6uMU+07HrVAfRw//mP8cmq7focLx2j1WgM+RK6MYIL4GvKmOuVwiyYW5kIB5Qm67q/SzUHAqFnAIgbCbSZXj7xAiHXS7uZbe+Kqh7QuNUrG10eA4ZCspPatXi13QKvLsIUOGrS5pnpc17OPepGvpPaL+XTiegBwJOd4TpP+ho6uwIQ15b2BxxyP3NPlYbdF/QpOu5zR9Y4nYp6VF70/5Ra3ISqFzZuHFg7/DNKXJRYnKr0",
   "codeSecret" : "7ba62df3-1e96-443a-8233-1af3f0982912",
+  "accessCodeLifespan" : 3600,
   "users": [
     {
       "username" : "administrator@company.com",
@@ -21,7 +22,15 @@
         "counter" : 0,
         "digits" : 0,
         "temporary" : false
-      } ]
+      } ],
+      "realmRoles" : [ "offline_access" ],
+      "clientRoles" : {
+        "account" : [ "manage-account", "view-profile" ],
+        "xxxxxxxx-restcomm-rest" : ["Administrator","Developer"],
+        "xxxxxxxx-restcomm-ui" : ["Administrator","Developer"],
+        "xxxxxxxx-restcomm-rvd" : ["Administrator","Developer"],
+        "xxxxxxxx-restcomm-rvd-ui" : ["Administrator","Developer"]
+      }
     },
     {
       "username" : "riadmin",
@@ -43,10 +52,55 @@
         "account" : [ "manage-account", "view-profile" ],
         "realm-management" : [ "realm-admin" ]
       }
+    },
+    {
+      "username" : "devuser@company.com",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : false,
+      "firstName" : "Restcomm developer test user",
+      "credentials" : [ {
+        "type" : "password",
+        "hashedSaltedValue" : "TKgYTZxR7kTEJugk8EWoVwClVAUruEJIRItkQ06kOHGy4KW9uDODJjzndCYBcj/Lq2jIGEtN7xC7KuAhCiDWSQ==",
+        "salt" : "2c4pmvMeyryk/0k05YOc1A==",
+        "hashIterations" : 1,
+        "counter" : 0,
+        "digits" : 0,
+        "temporary" : false
+      } ],
+      "realmRoles" : [ "offline_access" ],
+      "clientRoles" : {
+        "account" : [ "manage-account", "view-profile" ],
+        "xxxxxxxx-restcomm-rest" : ["Developer"],
+        "xxxxxxxx-restcomm-ui" : ["Developer"],
+        "xxxxxxxx-restcomm-rvd" : ["Developer"],
+        "xxxxxxxx-restcomm-rvd-ui" : ["Developer"]
+      }
+    },
+    {
+      "username" : "unlinked@company.com",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : false,
+      "firstName" : "Unlinked User",
+      "credentials" : [ {
+        "type" : "password",
+        "hashedSaltedValue" : "TKgYTZxR7kTEJugk8EWoVwClVAUruEJIRItkQ06kOHGy4KW9uDODJjzndCYBcj/Lq2jIGEtN7xC7KuAhCiDWSQ==",
+        "salt" : "2c4pmvMeyryk/0k05YOc1A==",
+        "hashIterations" : 1,
+        "counter" : 0,
+        "digits" : 0,
+        "temporary" : false
+      } ],
+      "realmRoles" : [ "offline_access" ],
+      "clientRoles" : {
+        "account" : [ "manage-account", "view-profile" ]
+      }
     }
   ],
   "clients": [
     {
+      "id" : "unregistered-restcomm",
       "clientId" : "unregistered-restcomm",
       "surrogateAuthRequired" : false,
       "enabled" : true,
@@ -64,6 +118,7 @@
       "fullScopeAllowed" : true
     },
     {
+      "id" : "restcomm-identity-rest",
       "clientId" : "restcomm-identity-rest",
       "surrogateAuthRequired" : false,
       "enabled" : true,
@@ -80,6 +135,90 @@
       "frontchannelLogout" : false,
       "protocol" : "openid-connect",
       "fullScopeAllowed" : true
+    },
+    {
+      "id" : "xxxxxxxx-restcomm-rest",
+      "clientId" : "xxxxxxxx-restcomm-rest",
+      "baseUrl" : "http://localhost/",
+      "surrogateAuthRequired" : false,
+      "enabled" : true,
+      "clientAuthenticatorType" : "client-secret",
+      "secret" : "secret",
+      "redirectUris" : [ "http://localhost/*" ],
+      "webOrigins" : [ "http://localhost" ],
+      "notBefore" : 0,
+      "bearerOnly" : false,
+      "consentRequired" : false,
+      "serviceAccountsEnabled" : false,
+      "directGrantsOnly" : false,
+      "publicClient" : false,
+      "frontchannelLogout" : false,
+      "attributes" : { },
+      "fullScopeAllowed" : true,
+      "nodeReRegistrationTimeout" : -1
+    },
+    {
+      "id" : "xxxxxxxx-restcomm-ui",
+      "clientId" : "xxxxxxxx-restcomm-ui",
+      "baseUrl" : "http://localhost/index.html",
+      "surrogateAuthRequired" : false,
+      "enabled" : true,
+      "clientAuthenticatorType" : "client-secret",
+      "secret" : "7aab6868-e539-4e3d-bf91-3880cae64b7b",
+      "redirectUris" : [ "http://localhost/*" ],
+      "webOrigins" : [ "http://localhost" ],
+      "notBefore" : 0,
+      "bearerOnly" : false,
+      "consentRequired" : false,
+      "serviceAccountsEnabled" : false,
+      "directGrantsOnly" : false,
+      "publicClient" : true,
+      "frontchannelLogout" : false,
+      "attributes" : { },
+      "fullScopeAllowed" : true,
+      "nodeReRegistrationTimeout" : -1
+    },
+    {
+      "id" : "xxxxxxxx-restcomm-rvd",
+      "clientId" : "xxxxxxxx-restcomm-rvd",
+      "baseUrl" : "http://localhost/restcomm-rvd/services",
+      "surrogateAuthRequired" : false,
+      "enabled" : true,
+      "clientAuthenticatorType" : "client-secret",
+      "secret" : "secret",
+      "redirectUris" : [ ],
+      "webOrigins" : [ ],
+      "notBefore" : 0,
+      "bearerOnly" : true,
+      "consentRequired" : false,
+      "serviceAccountsEnabled" : false,
+      "directGrantsOnly" : false,
+      "publicClient" : false,
+      "frontchannelLogout" : false,
+      "attributes" : { },
+      "fullScopeAllowed" : true,
+      "nodeReRegistrationTimeout" : -1
+    },
+    {
+      "id" : "xxxxxxxx-restcomm-rvd-ui",
+      "clientId" : "xxxxxxxx-restcomm-rvd-ui",
+      "baseUrl" : "http://localhost/restcomm-rvd/index.html",
+      "surrogateAuthRequired" : false,
+      "enabled" : true,
+      "clientAuthenticatorType" : "client-secret",
+      "secret" : "93a280d8-7eef-46b8-87b1-f2f3e5b78d39",
+      "redirectUris" : [ "http://localhost/restcomm-rvd/*" ],
+      "webOrigins" : [ "http://localhost" ],
+      "notBefore" : 0,
+      "bearerOnly" : false,
+      "consentRequired" : false,
+      "serviceAccountsEnabled" : false,
+      "directGrantsOnly" : false,
+      "publicClient" : true,
+      "frontchannelLogout" : false,
+      "attributes" : { },
+      "fullScopeAllowed" : true,
+      "nodeReRegistrationTimeout" : -1
     }
   ]
 }

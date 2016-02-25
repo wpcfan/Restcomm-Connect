@@ -20,6 +20,12 @@
 
 package org.mobicents.servlet.restcomm.http.identity;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
+import junit.framework.Assert;
 import org.apache.log4j.Logger;
 import org.jboss.arquillian.container.test.api.Deployer;
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -29,13 +35,22 @@ import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.jboss.shrinkwrap.resolver.api.maven.archive.ShrinkWrapMaven;
 import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mobicents.servlet.restcomm.identity.RestcommIdentityApi;
 
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import java.io.IOException;
 import java.net.URL;
 
 /**
  * @author Orestis Tsakiridis
+ *
+ * TODO Review all tests after https://github.com/RestComm/RestComm-Core/issues/898 is settled.
  */
 @RunWith(Arquillian.class)
 public class AccountsEndpointOauthTest {
@@ -47,11 +62,21 @@ public class AccountsEndpointOauthTest {
     @ArquillianResource
     URL deploymentUrl;
 
-    private String adminUsername = "administrator@company.com";
-    private String adminAccountSid = "ACae6e420f425248d6a26948c17a9e2acf";
-    private String adminAuthToken = "77f8c12cc7b8f8423e5c38b035249166";
+    private String unlinkedAccountSid = "AC39239204948584090289495039384949";
 
     private static IdentityRealmTestTool tool;
+
+    @BeforeClass
+    public static void setupRealm() throws RestcommIdentityApi.RestcommIdentityApiException, IOException {
+        tool = new IdentityRealmTestTool();
+        tool.importRealm("realm-with-identity-instance.json");
+    }
+
+
+    @AfterClass
+    public static void teardownRealm() throws RestcommIdentityApi.RestcommIdentityApiException {
+        tool.dropRealm("restcomm");
+    }
 
     @After
     public void after() throws InterruptedException {
@@ -59,9 +84,94 @@ public class AccountsEndpointOauthTest {
     }
 
     @Test
-    public void fooTest() {
-        logger.error("RUNNING FOO TEST");
+    public void accountRetrievalAccessRules() {
+        RestcommIdentityApi api = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "devuser@company.com", "RestComm", "restcomm", null);
+        String token =  api.getTokenString();
+        RestcommIdentityApi adminApi = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "administrator@company.com", "RestComm", "restcomm", null);
+        String adminToken =  adminApi.getTokenString();
+        String baseUrl = fixDeploymentUrl();
+
+        Client jerseyClient = Client.create();
+        // retrieve accounts as JSON
+        ClientResponse response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json").header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: retrieve accounts as JSON", 200, response.getStatus());
+        // retrieve single account as JSON
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/AC54b41ed43f543e9ca3c8da489b0c1631").header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: retrieve single account as JSON", 200, response.getStatus());
+        // retrieval of other single accounts should be prohibited
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/ACae6e420f425248d6a26948c17a9e2acf").header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: retrieval of other single accounts should be prohibited", 401, response.getStatus());
+        // retrieval of other single account by admin should be allowed
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/AC54b41ed43f543e9ca3c8da489b0c1631").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: retrieval of other single account by admin should be allowed", 200, response.getStatus());
     }
+
+    @Test
+    public void accountCreationAndLinkingAccessRules() {
+        RestcommIdentityApi adminApi = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "administrator@company.com", "RestComm", "restcomm", null);
+        String adminToken = adminApi.getTokenString();
+        String baseUrl = fixDeploymentUrl();
+
+        Client jerseyClient = Client.create();
+        // admin can create sub-accounts
+        MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+        params.add("Status", "ACTIVE");
+        params.add("FriendlyName", "New User");
+        ClientResponse response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).post(ClientResponse.class, params);
+        Assert.assertEquals("FAILED: Administrator user can create sub-accounts", 200, response.getStatus());
+        String body = response.getEntity(String.class);
+        JsonObject jsonObject = new JsonParser().parse(body).getAsJsonObject();
+        String newUserSid = jsonObject.getAsJsonPrimitive("sid").getAsString();
+        Assert.assertNotNull(newUserSid);
+        // create user and link account to it
+        params = new MultivaluedMapImpl();
+        params.add("username", "newuser@company.com");
+        params.add("password", "RestComm");
+        params.add("create", "true");
+        params.add("friendly_name", "New User");
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + newUserSid + "/operations/link").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).post(ClientResponse.class, params);
+        Assert.assertEquals("FAILED: linking 'New User' account with new keycloak user - newuser@company.com", 200, response.getStatus());
+        // access newlly created account/user
+        RestcommIdentityApi api = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "newuser@company.com", "RestComm", "restcomm", null);
+        String token = adminApi.getTokenString();
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/" + newUserSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: access newly created account", 200, response.getStatus());
+    }
+
+    @Test
+    public void accountLinkingTest() {
+        RestcommIdentityApi adminApi = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "administrator@company.com", "RestComm", "restcomm", null);
+        String adminToken = adminApi.getTokenString();
+        String baseUrl = fixDeploymentUrl();
+        Client jerseyClient = Client.create();
+
+        // account access by user unlinked@company.com should fail at first
+        RestcommIdentityApi api = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "unlinked@company.com", "RestComm", "restcomm", null);
+        String token = adminApi.getTokenString();
+        ClientResponse response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/" + unlinkedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: user unlinked@company.com should not have access to account", 401, response.getStatus());
+        // account-to-user linking by admin
+        MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+        params.add("username", "unlinked@company.com");
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + unlinkedAccountSid + "/operations/link").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).post(ClientResponse.class, params);
+        Assert.assertEquals("FAILED: account linking to unlinked@company.com user executed by admin", 200, response.getStatus());
+        // access newlly created account/user. Request a new token.
+        api = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "unlinked@company.com", "RestComm", "restcomm", null);
+        token = adminApi.getTokenString();
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts.json/" + unlinkedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + token).get(ClientResponse.class);
+        Assert.assertEquals("FAILED: user unlinked@company.com should be able to access his account after linking", 200, response.getStatus());
+
+    }
+
+
+    private String fixDeploymentUrl() {
+        String deploymentUrl = this.deploymentUrl.toString();
+        if (deploymentUrl.endsWith("/")) {
+            return deploymentUrl.substring(0, deploymentUrl.length() - 1);
+        }
+        return deploymentUrl;
+    }
+
 
     @Deployment(name = "AccountsEndpointOauthTest", managed = true, testable = false)
     public static WebArchive createWebArchiveNoGw() {
@@ -77,8 +187,9 @@ public class AccountsEndpointOauthTest {
         archive.delete("/WEB-INF/data/hsql/restcomm.script");
         archive.addAsWebInfResource("sip.xml");
         archive.addAsWebInfResource("restcomm.xml", "conf/restcomm.xml");
-        archive.addAsWebInfResource("restcomm.script", "data/hsql/restcomm.script");
+        archive.addAsWebInfResource("identity_restcomm.script", "data/hsql/restcomm.script");
         logger.info("Packaged Test App");
         return archive;
     }
+
 }

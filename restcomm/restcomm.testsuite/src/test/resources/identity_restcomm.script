@@ -23,8 +23,9 @@ GRANT DBA TO SA
 SET WRITE_DELAY 10
 SET SCHEMA PUBLIC
 INSERT INTO "restcomm_accounts" VALUES('ACae6e420f425248d6a26948c17a9e2acf','2012-04-24 22:51:29.372000000','2012-04-24 22:51:29.372000000','administrator@company.com','Default Administrator Account',NULL,'Full','active','77f8c12cc7b8f8423e5c38b035249166','Administrator','/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf')
-INSERT INTO "restcomm_accounts" VALUES('AC54b41ed43f543e9ca3c8da489b0c1631','2013-04-24 22:51:29.372000000','2013-04-24 22:51:29.372000000','devuser@company.com','Developer Test Account',NULL,'Full','active','77f8c12cc7b8f8423e5c38b035249166','Developer','/2012-04-24/Accounts/AC54b41ed43f543e9ca3c8da489b0c1631')
-INSERT INTO "restcomm_accounts" VALUES('AC39239204948584090289495039384949','2013-04-24 22:51:29.372000000','2013-04-24 22:51:29.372000000',NULL,'Unlinked Test Account',NULL,'Full','active','77f8c12cc7b8f8423e5c38b035249166','Developer','/2012-04-24/Accounts/AC39239204948584090289495039384949')
+INSERT INTO "restcomm_accounts" VALUES('AC54b41ed43f543e9ca3c8da489b0c1631','2013-04-24 22:51:29.372000000','2013-04-24 22:51:29.372000000','devuser@company.com','Developer Test Account','ACae6e420f425248d6a26948c17a9e2acf','Full','active','77f8c12cc7b8f8423e5c38b035249166','Developer','/2012-04-24/Accounts/AC54b41ed43f543e9ca3c8da489b0c1631')
+INSERT INTO "restcomm_accounts" VALUES('AC39239204948584090289495039384949','2013-04-24 22:51:29.372000000','2013-04-24 22:51:29.372000000',NULL,'Unlinked Test Account','ACae6e420f425248d6a26948c17a9e2acf','Full','active','77f8c12cc7b8f8423e5c38b035249166','Developer','/2012-04-24/Accounts/AC39239204948584090289495039384949')
+INSERT INTO "restcomm_accounts" VALUES('AC95729572957361563840483726484939','2013-04-24 22:51:29.372000000','2013-04-24 22:51:29.372000000','removed@company.com','Removed Account','ACae6e420f425248d6a26948c17a9e2acf','Full','active','77f8c12cc7b8f8423e5c38b035249166','Developer','/2012-04-24/Accounts/AC95729572957361563840483726484939')
 INSERT INTO "restcomm_configuration" VALUES('identity.instance-id','xxxxxxxx')
 INSERT INTO "restcomm_configuration" VALUES('identity.mode','cloud')
 INSERT INTO "restcomm_configuration" VALUES('identity.restcomm-client-secret','secret')

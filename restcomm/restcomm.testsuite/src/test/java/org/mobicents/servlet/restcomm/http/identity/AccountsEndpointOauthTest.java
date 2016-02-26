@@ -63,6 +63,7 @@ public class AccountsEndpointOauthTest {
     URL deploymentUrl;
 
     private String unlinkedAccountSid = "AC39239204948584090289495039384949";
+    private String removedAccountSid = "AC95729572957361563840483726484939";
 
     private static IdentityRealmTestTool tool;
 
@@ -139,7 +140,28 @@ public class AccountsEndpointOauthTest {
     }
 
     @Test
-    public void accountLinkingTest() {
+    public void accountRemovalAccessRules() {
+        String baseUrl = fixDeploymentUrl();
+        String token = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "devuser@company.com", "RestComm", "restcomm", null).getTokenString();
+        String removedUserToken = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "removed@company.com", "RestComm", "restcomm", null).getTokenString();
+        String adminToken = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "administrator@company.com", "RestComm", "restcomm", null).getTokenString();
+
+        Client jerseyClient = Client.create();
+        // a (Developer) user cannot remove accounts linked to other users
+        ClientResponse response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + removedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + token).delete(ClientResponse.class);
+        Assert.assertEquals("FAILED: A user should not be able to remove accounts linked to other users", 401, response.getStatus());
+        // a user can remove his own account (?)
+        // TODO the policy for self-removing accounts should be defined. So far restcomm prevents accounts remove themselves (400). But what about the case where the respective oauth tokens are used ?
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + removedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + removedUserToken).delete(ClientResponse.class);
+        Assert.assertEquals("FAILED: A user should not be able to remove his own account", 400, response.getStatus());
+        // an administrator should be able to remove a user's account
+        // TODO administrator can remove accounts only if they are their parents. The policy should be defined here (at least for SSO branch).
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + removedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).delete(ClientResponse.class);
+        Assert.assertEquals("FAILED: Administrator should be able to remove a user's account", 200, response.getStatus());
+    }
+
+    @Test
+    public void accountLinking() {
         RestcommIdentityApi adminApi = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "administrator@company.com", "RestComm", "restcomm", null);
         String adminToken = adminApi.getTokenString();
         String baseUrl = fixDeploymentUrl();
@@ -162,6 +184,7 @@ public class AccountsEndpointOauthTest {
         Assert.assertEquals("FAILED: user unlinked@company.com should be able to access his account after linking", 200, response.getStatus());
 
     }
+
 
 
     private String fixDeploymentUrl() {

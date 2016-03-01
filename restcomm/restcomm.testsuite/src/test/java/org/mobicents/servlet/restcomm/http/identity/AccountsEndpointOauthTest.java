@@ -64,6 +64,7 @@ public class AccountsEndpointOauthTest {
 
     private String unlinkedAccountSid = "AC39239204948584090289495039384949";
     private String removedAccountSid = "AC95729572957361563840483726484939";
+    private String updatedAccountSid = "AC84769385783047164960483859372923";
 
     private static IdentityRealmTestTool tool;
 
@@ -155,9 +156,28 @@ public class AccountsEndpointOauthTest {
         response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + removedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + removedUserToken).delete(ClientResponse.class);
         Assert.assertEquals("FAILED: A user should not be able to remove his own account", 400, response.getStatus());
         // an administrator should be able to remove a user's account
-        // TODO administrator can remove accounts only if they are their parents. The policy should be defined here (at least for SSO branch).
+        // TODO administrator can remove accounts only if they are his children. The policy should be defined here (at least for SSO branch).
         response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + removedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).delete(ClientResponse.class);
         Assert.assertEquals("FAILED: Administrator should be able to remove a user's account", 200, response.getStatus());
+    }
+
+    @Test
+    public void accountUpdateAccessRules() {
+        String baseUrl = fixDeploymentUrl();
+        String token = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "updated@company.com", "RestComm", "restcomm", null).getTokenString();
+        String adminToken = new RestcommIdentityApi(IdentityRealmTestTool.AUTH_SERVER_BASE_URL, "administrator@company.com", "RestComm", "restcomm", null).getTokenString();
+
+        MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+        params.add("FriendlyName", "Account is updated");
+
+        Client jerseyClient = Client.create();
+        // a (Developer) user can update his account
+        ClientResponse response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + updatedAccountSid + ".json").header(HttpHeaders.AUTHORIZATION, "Bearer " + token).post(ClientResponse.class, params);
+        Assert.assertEquals("FAILED: A user should be able to update  his account", 200, response.getStatus());
+        // an administrator should be able to remove a user's account
+        // TODO administrator can remove accounts only if they are his children. The policy should be defined here (at least for SSO branch).
+        response = jerseyClient.resource(baseUrl + "/2012-04-24/Accounts/" + updatedAccountSid).header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken).post(ClientResponse.class, params);
+        Assert.assertEquals("FAILED: Administrator should be able to update his children accounts", 200, response.getStatus());
     }
 
     @Test

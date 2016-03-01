@@ -120,6 +120,30 @@
         "xxxxxxxx-restcomm-rvd" : ["Developer"],
         "xxxxxxxx-restcomm-rvd-ui" : ["Developer"]
       }
+    },
+    {
+      "username" : "updated@company.com",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : false,
+      "firstName" : "Updated account User",
+      "credentials" : [ {
+        "type" : "password",
+        "hashedSaltedValue" : "TKgYTZxR7kTEJugk8EWoVwClVAUruEJIRItkQ06kOHGy4KW9uDODJjzndCYBcj/Lq2jIGEtN7xC7KuAhCiDWSQ==",
+        "salt" : "2c4pmvMeyryk/0k05YOc1A==",
+        "hashIterations" : 1,
+        "counter" : 0,
+        "digits" : 0,
+        "temporary" : false
+      } ],
+      "realmRoles" : [ "offline_access" ],
+      "clientRoles" : {
+        "account" : [ "manage-account", "view-profile" ],
+        "xxxxxxxx-restcomm-rest" : ["Developer"],
+        "xxxxxxxx-restcomm-ui" : ["Developer"],
+        "xxxxxxxx-restcomm-rvd" : ["Developer"],
+        "xxxxxxxx-restcomm-rvd-ui" : ["Developer"]
+      }
     }
   ],
   "clients": [

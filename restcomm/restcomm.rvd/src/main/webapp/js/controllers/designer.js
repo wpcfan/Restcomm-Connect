@@ -1,4 +1,4 @@
-var designerCtrl = App.controller('designerCtrl', function($scope, $q, $routeParams, $location, stepService, $http, $timeout, $injector, stepRegistry, stepPacker, $modal, notifications, ModelBuilder, projectSettingsService, webTriggerService, nodeRegistry, editedNodes, project, designerService, $filter, bundledWavs) {
+var designerCtrl = App.controller('designerCtrl', function($scope, $q, $routeParams, $location, stepService, $http, $timeout, $injector, stepRegistry, stepPacker, $modal, notifications, ModelBuilder, projectSettingsService, webTriggerService, nodeRegistry, editedNodes, project, designerService, $filter, bundledWavs, dragService) {
 	
 	$scope.logger = function(s) {
 		console.log(s);
@@ -256,7 +256,8 @@ var designerCtrl = App.controller('designerCtrl', function($scope, $q, $routePar
 			$scope.$apply( function ()  {
 				listmodel.splice(pos,0, step);
 			});
-		}				
+		}
+		dragService.disableStickyIndexControl();
 	}
 	
 	$scope.removeStep = function (step,node_steps,steps) {

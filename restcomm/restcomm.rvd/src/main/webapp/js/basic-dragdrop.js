@@ -103,18 +103,8 @@ angular.module('basicDragdrop', [])
 				var dragId = dragService.newDrag(dragModel);
 				//console.log( "created new drag: " + dragId );
 
-                // z-index control for workspace draggable actions while in sticky mode
-                if(document.getElementsByClassName("sticky-workspace").length > 0){
-                    angular.element(document.getElementsByClassName("sticky-workspace")).addClass('sticky-draggable-workspace');
-                }
+                dragService.enableStickyIndexControl();
 			});
-
-            element.bind('dragstop', function (event, ui)  {
-                // z-index control for workspace draggable actions while in sticky mode
-                if(document.getElementsByClassName("sticky-workspace").length > 0){
-                    angular.element(document.getElementsByClassName("sticky-workspace")).removeClass('sticky-draggable-workspace');
-                }
-            });
         }
     };
 }])

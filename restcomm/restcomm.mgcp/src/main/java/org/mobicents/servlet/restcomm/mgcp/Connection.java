@@ -19,15 +19,7 @@
  */
 package org.mobicents.servlet.restcomm.mgcp;
 
-import akka.actor.ActorRef;
-import akka.actor.ReceiveTimeout;
-import akka.actor.UntypedActor;
-import akka.actor.UntypedActorContext;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
-
 import jain.protocol.ip.mgcp.JainMgcpResponseEvent;
-import jain.protocol.ip.mgcp.message.AuditConnection;
 import jain.protocol.ip.mgcp.message.CreateConnection;
 import jain.protocol.ip.mgcp.message.CreateConnectionResponse;
 import jain.protocol.ip.mgcp.message.DeleteConnection;
@@ -38,7 +30,8 @@ import jain.protocol.ip.mgcp.message.parms.ConnectionDescriptor;
 import jain.protocol.ip.mgcp.message.parms.ConnectionIdentifier;
 import jain.protocol.ip.mgcp.message.parms.ConnectionMode;
 import jain.protocol.ip.mgcp.message.parms.EndpointIdentifier;
-import jain.protocol.ip.mgcp.message.parms.InfoCode;
+import jain.protocol.ip.mgcp.message.parms.LocalOptionExtension;
+import jain.protocol.ip.mgcp.message.parms.LocalOptionValue;
 import jain.protocol.ip.mgcp.message.parms.NotifiedEntity;
 import jain.protocol.ip.mgcp.message.parms.ReturnCode;
 
@@ -48,15 +41,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.mobicents.servlet.restcomm.patterns.Observe;
-import org.mobicents.servlet.restcomm.patterns.Observing;
-import org.mobicents.servlet.restcomm.patterns.StopObserving;
 import org.mobicents.servlet.restcomm.fsm.Action;
 import org.mobicents.servlet.restcomm.fsm.FiniteStateMachine;
 import org.mobicents.servlet.restcomm.fsm.State;
 import org.mobicents.servlet.restcomm.fsm.Transition;
+import org.mobicents.servlet.restcomm.patterns.Observe;
+import org.mobicents.servlet.restcomm.patterns.Observing;
+import org.mobicents.servlet.restcomm.patterns.StopObserving;
 
 import scala.concurrent.duration.Duration;
+import akka.actor.ActorRef;
+import akka.actor.ReceiveTimeout;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorContext;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -89,6 +88,7 @@ public final class Connection extends UntypedActor {
     private ConnectionIdentifier connId;
     private ConnectionDescriptor localDesc;
     private ConnectionDescriptor remoteDesc;
+    private boolean webrtc;
 
     public Connection(final ActorRef gateway, final MediaSession session, final NotifiedEntity agent, final long timeout) {
         super();
@@ -137,6 +137,7 @@ public final class Connection extends UntypedActor {
         this.connId = null;
         this.localDesc = null;
         this.remoteDesc = null;
+        this.webrtc = false;
     }
 
     private void observe(final Object message) {
@@ -171,16 +172,16 @@ public final class Connection extends UntypedActor {
         } else if (OpenConnection.class.equals(klass)) {
             final OpenConnection request = (OpenConnection) message;
             if (request.descriptor() == null) {
+                this.webrtc = request.isWebrtc();
                 fsm.transition(message, openingHalfWay);
             } else {
+                // TODO check based on descriptor if connection is webrtc
                 fsm.transition(message, opening);
             }
         } else if (UpdateConnection.class.equals(klass)) {
             fsm.transition(message, modifying);
         } else if (CloseConnection.class.equals(klass)) {
             fsm.transition(message, closing);
-        } else if (InspectConnection.class.equals(klass)) {
-            auditConnection(message, sender());
         } else if (message instanceof JainMgcpResponseEvent) {
             final JainMgcpResponseEvent response = (JainMgcpResponseEvent) message;
             final int code = response.getReturnCode().getValue();
@@ -206,12 +207,6 @@ public final class Connection extends UntypedActor {
         } else if (message instanceof ReceiveTimeout) {
             fsm.transition(message, closed);
         }
-    }
-
-    private void auditConnection(Object message, ActorRef source) {
-        InfoCode[] requestedInfo = new InfoCode[] { InfoCode.ConnectionMode };
-        AuditConnection aucx = new AuditConnection(source, endpointId, connId, requestedInfo);
-        gateway.tell(aucx, source);
     }
 
     private void stopObserving(final Object message) {
@@ -406,6 +401,10 @@ public final class Connection extends UntypedActor {
                 crcx.setRemoteConnectionDescriptor(remoteDesc);
             }
             crcx.setNotifiedEntity(agent);
+            LocalOptionValue[] localOptions = new LocalOptionValue[] { new LocalOptionExtension("webrtc",
+                    String.valueOf(webrtc)) };
+            crcx.setLocalConnectionOptions(localOptions);
+
             gateway.tell(crcx, source);
             // Make sure we don't wait for a response indefinitely.
             getContext().setReceiveTimeout(Duration.create(timeout, TimeUnit.MILLISECONDS));
@@ -442,6 +441,7 @@ public final class Connection extends UntypedActor {
             final ConnectionDescriptor descriptor = request.descriptor();
             if (descriptor != null) {
                 mdcx.setRemoteConnectionDescriptor(descriptor);
+                remoteDesc = descriptor;
             }
             gateway.tell(mdcx, source);
             // Make sure we don't wait for a response indefinitely.

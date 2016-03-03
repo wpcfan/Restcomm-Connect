@@ -239,6 +239,7 @@ angular.module('Rvd')
 	function ClientNounModel() {
 		this.dialType = 'client';
 		this.destination = '';
+		this.beforeConnectModule = undefined;
 	}
 	ClientNounModel.prototype = new rvdModel();
 	ClientNounModel.prototype.contructor = ClientNounModel;
@@ -513,6 +514,27 @@ angular.module('Rvd')
 	FaxModel.prototype = new rvdModel();
 	FaxModel.prototype.contructor = FaxModel;
 	return FaxModel;
+}])
+.factory('emailModel', ['rvdModel', function EmailModelFactory(rvdModel) {
+	function EmailModel(name) {
+		if (name)
+			this.name = name;
+		this.kind = 'email';
+		this.label = 'email';
+		this.title = 'email';
+		this.text = '';
+		this.to = undefined;
+		this.from = undefined;
+		this.cc = undefined;
+  		this.bcc = undefined;
+		this.subject = undefined;
+		this.statusCallback = undefined;
+		this.next = null;
+		this.iface = {};
+	}
+	EmailModel.prototype = new rvdModel();
+	EmailModel.prototype.contructor = EmailModel;
+	return EmailModel;
 }])
 .factory('recordModel', ['rvdModel', function RecordModelFactory(rvdModel) {
 	function RecordModel(name) {

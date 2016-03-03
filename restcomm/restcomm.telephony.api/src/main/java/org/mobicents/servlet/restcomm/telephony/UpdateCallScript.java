@@ -18,9 +18,10 @@ public final class UpdateCallScript {
     private final String fallbackMethod;
     private final URI callback;
     private final String callbackMethod;
+    private Boolean moveConnectedCallLeg;
 
-    public UpdateCallScript(final ActorRef call, final Sid account, final String version, final URI url, final String method,
-            final URI fallbackUrl, final String fallbackMethod, final URI callback, final String callbackMethod) {
+    public UpdateCallScript(ActorRef call, Sid account, String version, URI url, String method, URI fallbackUrl,
+            String fallbackMethod, URI callback, String callbackMethod, Boolean moveConnectedCallLeg) {
         super();
         this.call = call;
         this.account = account;
@@ -31,6 +32,7 @@ public final class UpdateCallScript {
         this.fallbackMethod = fallbackMethod;
         this.callback = callback;
         this.callbackMethod = callbackMethod;
+        this.moveConnectedCallLeg = moveConnectedCallLeg;
     }
 
     public ActorRef call() {
@@ -68,4 +70,9 @@ public final class UpdateCallScript {
     public String callbackMethod() {
         return callbackMethod;
     }
+
+    public Boolean moveConnecteCallLeg() {
+        return moveConnectedCallLeg;
+    }
+
 }

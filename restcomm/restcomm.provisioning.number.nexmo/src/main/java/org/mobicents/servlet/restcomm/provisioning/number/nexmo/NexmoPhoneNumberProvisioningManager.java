@@ -42,6 +42,7 @@ import org.mobicents.servlet.restcomm.util.StringUtils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
@@ -122,7 +123,7 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
                     getFriendlyName(number.get("msisdn").getAsString(), countryCode),
                     number.get("msisdn").getAsString(),
                     null, null, null, null, null, null,
-                    countryCode, isVoiceCapable, isSmsCapable, null, null, null);
+                    countryCode, number.get("cost").getAsString(), isVoiceCapable, isSmsCapable, null, null, null);
             numbers.add(phoneNumber);
         }
         return numbers;
@@ -141,11 +142,23 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
             logger.debug("searchPattern " + listFilters.getFilterPattern());
         }
         Pattern filterPattern = listFilters.getFilterPattern();
+        String filterPatternString = null;
+        if(filterPattern != null) {
+            filterPatternString = filterPattern.toString().replaceAll("[^\\d]", "");
+        }
+        if(logger.isDebugEnabled()) {
+            logger.debug("searchPattern simplified for nexmo " + filterPatternString);
+        }
 
         String queryUri = searchURI + country;
         boolean queryParamAdded = false;
-        if(filterPattern != null) {
-            queryUri = queryUri + "?pattern=" + filterPattern.toString();
+        if(("US".equalsIgnoreCase(country) || "CA".equalsIgnoreCase(country)) && listFilters.getAreaCode() != null) {
+            // https://github.com/Mobicents/RestComm/issues/551 fixing the search pattern for US when Area Code is selected
+            // https://github.com/Mobicents/RestComm/issues/602 fixing the search pattern for CA when Area Code is selected
+            queryUri = queryUri + "?pattern=1" + listFilters.getAreaCode() + "&search_pattern=0";
+            queryParamAdded = true;
+        } else if(filterPatternString != null) {
+            queryUri = queryUri + "?pattern=" + filterPatternString + "&search_pattern=1";
             queryParamAdded = true;
         }
         if(listFilters.getSmsEnabled() != null || listFilters.getVoiceEnabled() != null) {
@@ -156,11 +169,11 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
                 queryUri = queryUri + "&";
             }
             if(listFilters.getSmsEnabled() != null && listFilters.getVoiceEnabled() != null) {
-                queryUri = queryUri + "features=" + listFilters.getSmsEnabled() + "," + listFilters.getVoiceEnabled();
+                queryUri = queryUri + "features=SMS,VOICE";
             } else if(listFilters.getSmsEnabled() != null) {
-                queryUri = queryUri + "features=" + listFilters.getSmsEnabled();
+                queryUri = queryUri + "features=SMS";
             } else {
-                queryUri = queryUri + "features=" + listFilters.getVoiceEnabled();
+                queryUri = queryUri + "features=VOICE";
             }
         }
         if(listFilters.getRangeIndex() != -1) {
@@ -195,13 +208,25 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
 //                        get.addHeader("OutboundIntf", uri.getHost()+":"+uri.getPort()+":"+uri.getTransportParam());
 //                    }
 //                }
+            if(logger.isDebugEnabled()) {
+                logger.debug("Nexmo query " + queryUri);
+            }
             final HttpResponse response = client.execute(get);
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 final String content = StringUtils.toString(response.getEntity().getContent());
                 JsonParser parser = new JsonParser();
                 JsonObject jsonResponse = parser.parse(content).getAsJsonObject();
-
-                long count = jsonResponse.getAsJsonPrimitive("count").getAsLong();
+                if(logger.isDebugEnabled()) {
+                    logger.debug("Nexmo response " + jsonResponse.toString());
+                }
+                JsonPrimitive countPrimitive = jsonResponse.getAsJsonPrimitive("count");
+                if(countPrimitive == null) {
+                    if(logger.isDebugEnabled()) {
+                        logger.debug("No numbers found");
+                    }
+                    return new ArrayList<PhoneNumber>();
+                }
+                long count = countPrimitive.getAsLong();
                 if(logger.isDebugEnabled()) {
                     logger.debug("Number of numbers found : "+count);
                 }
@@ -219,7 +244,8 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
     }
 
     @Override
-    public boolean buyNumber(String phoneNumber, PhoneNumberParameters phoneNumberParameters) {
+    public boolean buyNumber(PhoneNumber phoneNumberObject, PhoneNumberParameters phoneNumberParameters) {
+        String phoneNumber = phoneNumberObject.getPhoneNumber();
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
         String country = null;
         try {
@@ -260,7 +286,7 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
 //                }
             final HttpResponse response = client.execute(post);
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                updateNumber(phoneNumber, phoneNumberParameters);
+                updateNumber(phoneNumberObject, phoneNumberParameters);
                 // we always return true as the phone number was bought
                 return true;
             } else {
@@ -275,7 +301,8 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
     }
 
     @Override
-    public boolean updateNumber(String phoneNumber, PhoneNumberParameters phoneNumberParameters) {
+    public boolean updateNumber(PhoneNumber phoneNumberObj, PhoneNumberParameters phoneNumberParameters) {
+        String phoneNumber = phoneNumberObj.getPhoneNumber();
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
         String country = null;
         try {
@@ -300,16 +327,17 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
             updateUri = updateURI + country + "/" + phoneNumber;
         }
         try {
-            if(phoneNumberParameters.getVoiceUrl() != null || phoneNumberParameters.getSmsUrl() != null) {
+            if((phoneNumberParameters.getVoiceUrl() != null && !phoneNumberParameters.getVoiceUrl().isEmpty()) ||
+                    (phoneNumberParameters.getSmsUrl() != null && phoneNumberParameters.getSmsUrl().isEmpty())) {
                 updateUri = updateUri + "?";
                 if(phoneNumberParameters.getSmsUrl() != null && !phoneNumberParameters.getSmsUrl().isEmpty()
                         && phoneNumberParameters.getVoiceUrl() != null && !phoneNumberParameters.getVoiceUrl().isEmpty()) {
-                    updateUri = updateUri + "voiceCallbackValue=" + URLEncoder.encode(phoneNumberParameters.getVoiceUrl(), "UTF-8") + "&voiceCallbackType=sip" +
-                            "&moHttpUrl=" + phoneNumberParameters.getSmsUrl() + "&moSmppSysType=inbound";
+                    updateUri = updateUri + "voiceCallbackValue=" + URLEncoder.encode(phoneNumber+"@"+phoneNumberParameters.getVoiceUrl(), "UTF-8") + "&voiceCallbackType=sip" +
+                            "&moHttpUrl=" + URLEncoder.encode(phoneNumber+"@"+phoneNumberParameters.getSmsUrl(), "UTF-8") + "&moSmppSysType=inbound";
                 } else if(phoneNumberParameters.getVoiceUrl() != null && !phoneNumberParameters.getVoiceUrl().isEmpty()) {
-                    updateUri = updateUri + "voiceCallbackValue=" + URLEncoder.encode(phoneNumberParameters.getVoiceUrl(), "UTF-8") + "&voiceCallbackType=sip";
+                    updateUri = updateUri + "voiceCallbackValue=" + URLEncoder.encode(phoneNumber+"@"+phoneNumberParameters.getVoiceUrl(), "UTF-8") + "&voiceCallbackType=sip";
                 } else {
-                    updateUri = updateUri + "moHttpUrl=" + URLEncoder.encode(phoneNumberParameters.getSmsUrl(), "UTF-8") + "&moSmppSysType=inbound";
+                    updateUri = updateUri + "moHttpUrl=" + URLEncoder.encode(phoneNumber+"@"+phoneNumberParameters.getSmsUrl(), "UTF-8") + "&moSmppSysType=inbound";
                 }
             }
             final HttpPost updatePost = new HttpPost(updateUri);
@@ -330,7 +358,8 @@ public class NexmoPhoneNumberProvisioningManager implements PhoneNumberProvision
     }
 
     @Override
-    public boolean cancelNumber(String phoneNumber) {
+    public boolean cancelNumber(PhoneNumber phoneNumberObj) {
+        String phoneNumber = phoneNumberObj.getPhoneNumber();
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
         String country = null;
         try {

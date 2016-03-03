@@ -1,13 +1,10 @@
 package org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol;
 
-public class RvdErrorParsingRestcommXml extends CallControlException {
+import org.mobicents.servlet.restcomm.rvd.exceptions.RestcommConfigurationException;
+
+public class RvdErrorParsingRestcommXml extends RestcommConfigurationException {
 
     public RvdErrorParsingRestcommXml() {
-        // TODO Auto-generated constructor stub
-    }
-
-    public RvdErrorParsingRestcommXml(String message, Throwable cause) {
-        super(message, cause);
         // TODO Auto-generated constructor stub
     }
 

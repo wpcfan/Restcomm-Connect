@@ -19,33 +19,40 @@
  */
 package org.mobicents.servlet.restcomm.telephony.ua;
 
+import java.io.IOException;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.sip.SipFactory;
+import javax.servlet.sip.SipServlet;
+import javax.servlet.sip.SipServletContextEvent;
+import javax.servlet.sip.SipServletListener;
+import javax.servlet.sip.SipServletRequest;
+import javax.servlet.sip.SipServletResponse;
+
+import org.apache.commons.configuration.Configuration;
+import org.apache.log4j.Logger;
+import org.mobicents.servlet.restcomm.dao.DaoManager;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.actor.UntypedActorFactory;
 
-import java.io.IOException;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.sip.SipFactory;
-import javax.servlet.sip.SipServlet;
-import javax.servlet.sip.SipServletRequest;
-import javax.servlet.sip.SipServletResponse;
-
-import org.apache.commons.configuration.Configuration;
-import org.mobicents.servlet.restcomm.dao.DaoManager;
-
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
+ * @author <a href="mailto:gvagenas@gmail.com">gvagenas</a>
  */
-public final class UserAgentManagerProxy extends SipServlet {
+public final class UserAgentManagerProxy extends SipServlet implements SipServletListener{
     private static final long serialVersionUID = 1L;
+    private static Logger logger = Logger.getLogger(UserAgentManagerProxy.class);
 
     private ActorSystem system;
     private ActorRef manager;
+    private ServletContext servletContext;
+
+    private Configuration configuration;
 
     public UserAgentManagerProxy() {
         super();
@@ -53,7 +60,8 @@ public final class UserAgentManagerProxy extends SipServlet {
 
     @Override
     public void destroy() {
-        system.stop(manager);
+        if (system != null)
+            system.stop(manager);
     }
 
     @Override
@@ -61,21 +69,26 @@ public final class UserAgentManagerProxy extends SipServlet {
         manager.tell(request, null);
     }
 
+//    @Override
+//    protected void doResponse(final SipServletResponse response) throws ServletException, IOException {
+//        manager.tell(response, null);
+//    }
+
     @Override
-    protected void doResponse(final SipServletResponse response) throws ServletException, IOException {
+    protected void doSuccessResponse(final SipServletResponse response) throws ServletException, IOException {
         manager.tell(response, null);
     }
 
     @Override
-    public void init(final ServletConfig config) throws ServletException {
-        final ServletContext context = config.getServletContext();
-        Configuration configuration = (Configuration) context.getAttribute(Configuration.class.getName());
-        configuration.setProperty(ServletConfig.class.getName(), config);
-        final SipFactory factory = (SipFactory) context.getAttribute(SIP_FACTORY);
-        final DaoManager storage = (DaoManager) context.getAttribute(DaoManager.class.getName());
-        system = (ActorSystem) context.getAttribute(ActorSystem.class.getName());
-        manager = manager(configuration, factory, storage);
+    protected void doErrorResponse(final SipServletResponse response) throws ServletException, IOException {
+        logger.debug("Error response: \n"+response.toString()+"\n");
+        manager.tell(response, null);
     }
+
+    //    @Override
+//    public void init(final ServletConfig config) throws ServletException {
+//        configuration.setProperty(ServletConfig.class.getName(), config);
+//    }
 
     private ActorRef manager(final Configuration configuration, final SipFactory factory, final DaoManager storage) {
         return system.actorOf(new Props(new UntypedActorFactory() {
@@ -83,8 +96,20 @@ public final class UserAgentManagerProxy extends SipServlet {
 
             @Override
             public UntypedActor create() throws Exception {
-                return new UserAgentManager(configuration, factory, storage);
+                return new UserAgentManager(configuration, factory, storage, servletContext);
             }
         }));
+    }
+
+    @Override
+    public void servletInitialized(SipServletContextEvent event) {
+        if (event.getSipServlet().getClass().equals(UserAgentManagerProxy.class)) {
+            servletContext = event.getServletContext();
+            configuration = (Configuration) servletContext.getAttribute(Configuration.class.getName());
+            final SipFactory factory = (SipFactory) servletContext.getAttribute(SIP_FACTORY);
+            final DaoManager storage = (DaoManager) servletContext.getAttribute(DaoManager.class.getName());
+            system = (ActorSystem) servletContext.getAttribute(ActorSystem.class.getName());
+            manager = manager(configuration, factory, storage);
+        }
     }
 }

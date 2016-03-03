@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.telestax.servlet</groupId>
 		<artifactId>restcomm</artifactId>
-		<version>7.2.2-SNAPSHOT</version>
+		<version>7.6.0-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>restcomm.telephony</artifactId>
@@ -75,11 +75,6 @@
 		</dependency>
 
 		<dependency>
-			<groupId>javax.sdp</groupId>
-			<artifactId>nist-sdp</artifactId>
-		</dependency>
-
-		<dependency>
 			<groupId>com.telestax.servlet</groupId>
 			<artifactId>restcomm.commons</artifactId>
 			<version>${project.version}</version>
@@ -95,7 +90,7 @@
 
 		<dependency>
 			<groupId>com.telestax.servlet</groupId>
-			<artifactId>restcomm.mgcp</artifactId>
+			<artifactId>restcomm.mscontrol.api</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
@@ -127,6 +122,21 @@
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.monitoring.service</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.sip</groupId>
+			<artifactId>jain-sip-ri</artifactId>
+			<version>${sip-ri.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
 	</dependencies>
 
 	<build>

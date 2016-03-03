@@ -25,7 +25,8 @@ rcMod.controller('NumbersCtrl', function ($scope, $resource, $modal, $dialog, $r
   };
 
   // add incoming number -----------------------------------------------------
-
+/*
+// no modal is used for number registration any more
   $scope.showRegisterIncomingNumberModal = function () {
     var registerIncomingNumberModal = $modal.open({
       controller: NumberDetailsCtrl,
@@ -43,6 +44,7 @@ rcMod.controller('NumbersCtrl', function ($scope, $resource, $modal, $dialog, $r
       }
     );
   };
+  */
 
   // delete incoming number --------------------------------------------------
 
@@ -55,7 +57,7 @@ rcMod.controller('NumbersCtrl', function ($scope, $resource, $modal, $dialog, $r
 
 // Numbers : Incoming : Details (also used for Modal) --------------------------
 
-var NumberDetailsCtrl = function ($scope, $routeParams, $location, $dialog, $modalInstance, SessionService, RCommNumbers, RCommApps, RCommAvailableNumbers, Notifications, allCountries, providerCountries, localApps, $rootScope) {
+var NumberDetailsCtrl = function ($scope, $routeParams, $location, $dialog, $modalInstance, SessionService, RCommNumbers, RCommApps, RCommAvailableNumbers, Notifications, allCountries, providerCountries, localApps, $rootScope, AuthService) {
 
   // are we editing details...
   //if($scope.phoneSid === $routeParams.phoneSid) {
@@ -64,7 +66,7 @@ var NumberDetailsCtrl = function ($scope, $routeParams, $location, $dialog, $mod
     $scope.phoneSid = $routeParams.phoneSid
 
     $scope.numberDetails = RCommNumbers.get({accountSid:$scope.sid, phoneSid: $scope.phoneSid});
-    
+
   //} // or registering a new one ?
   //else {
   //  // start optional items collapsed
@@ -76,14 +78,15 @@ var NumberDetailsCtrl = function ($scope, $routeParams, $location, $dialog, $mod
   //}
 
   // query for available apps
-  $scope.availableApps = RCommApps.query();
+  //$scope.availableApps = RCommApps.query({account:AuthService.getEmailAddress()});
   $scope.localApps = localApps;
 
   //$scope.countries = countries;
   $scope.countries = allCountries;
   $scope.providerCountries = providerCountries;
 
-  $scope.areaCodes = RCommAvailableNumbers.getAreaCodes();
+  $scope.areaCodesUS = RCommAvailableNumbers.getAreaCodes({countryCode: 'US'});
+  $scope.areaCodesCA = RCommAvailableNumbers.getAreaCodes({countryCode: 'CA'});
   $scope.selected = undefined;
 
   $scope.registerIncomingNumber = function(number) {
@@ -152,7 +155,8 @@ var NumberRegisterCtrl = function ($scope, $routeParams, $location, $http, $dial
   $scope.countries = allCountries;
   $scope.providerCountries = providerCountries;
 
-  $scope.areaCodes = RCommAvailableNumbers.getAreaCodes();
+  $scope.areaCodesUS = RCommAvailableNumbers.getAreaCodes({countryCode: 'US'});
+  $scope.areaCodesCA = RCommAvailableNumbers.getAreaCodes({countryCode: 'CA'});
   $scope.selected = undefined;
 
   $scope.setProvider = function(isProvider) {
@@ -167,11 +171,20 @@ var NumberRegisterCtrl = function ($scope, $routeParams, $location, $http, $dial
   };
 
   $scope.searching = false;
+  $scope.pageSize = 10;
 
-  $scope.findNumbers = function(areaCode, countryCode) {
+  $scope.findNumbers = function(pageNr) {
     $scope.searching = true;
     $scope.availableNumbers = null;
-    $scope.availableNumbers = RCommAvailableNumbers.query({accountSid: $scope.sid, countryCode: countryCode.code, areaCode: areaCode});
+    var queryParams = {accountSid: $scope.sid, countryCode: $scope.newNumber.countryCode.code};
+    if($scope.newNumber.area_code) { queryParams['AreaCode'] = $scope.newNumber.area_code; }
+    if($scope.newNumber.phone_number) { queryParams['Contains'] = $scope.newNumber.phone_number; }
+    angular.forEach($scope.newNumber.capabilities, function(value, key) {
+      this[value + 'Enabled'] = 'true';
+    }, queryParams);
+    queryParams.RangeSize = $scope.pageSize || 10;
+    queryParams.RangeIndex = $scope.currentPage = pageNr || 1;
+    $scope.availableNumbers = RCommAvailableNumbers.query(queryParams);
     $scope.availableNumbers.$promise.then(
       //success
       function(value){
@@ -183,6 +196,15 @@ var NumberRegisterCtrl = function ($scope, $routeParams, $location, $http, $dial
       }
     );
   }
+
+  $scope.nextRange = function() {
+    $scope.findNumbers(++$scope.currentPage);
+  }
+
+  $scope.prevRange = function() {
+    $scope.findNumbers(--$scope.currentPage);
+  }
+
 };
 
 
@@ -215,15 +237,18 @@ var confirmNumberDelete = function(phone, $dialog, $scope, RCommNumbers, Notific
 };
 
 var confirmNumberRegister = function(phone, isSIP, $dialog, $scope, RCommNumbers, Notifications, $location, $http) {
-  var title = 'Register Number ' + (phone.phone_number || phone.phoneNumber);
-  var msg = 'Are you sure you want to register incoming number ' + (phone.phone_number || phone.phoneNumber) + ' (' + (phone.friendly_name || phone.friendlyName) +  ') ? ' + (isSIP ? '' : 'It will cost you ' + phone.cost + '.');
+  var newNumber = phone.phone_number || phone.phoneNumber;
+  var newFriendly = phone.friendly_name || phone.friendlyName || newNumber;
+  var newCost = phone.cost || 0;
+  var title = 'Register Number ' + newNumber;
+  var msg = 'Are you sure you want to register incoming number ' + newNumber + ' (' + newFriendly +  ') ? ' + ((isSIP || !newCost) ? '' : 'It will cost you ' + newCost + '.');
   var btns = [{result:'cancel', label: 'Cancel', cssClass: 'btn-default'}, {result:'confirm', label: 'Register', cssClass: 'btn-primary'}];
 
   $dialog.messageBox(title, msg, btns)
     .open()
     .then(function(result) {
       if (result == "confirm") {
-        var params = createNumberParams(phone);
+        var params = createNumberParams(phone, isSIP);
         RCommNumbers.register({accountSid: $scope.sid}, $.param(params),
          function(phone, headers) { // success
            phone.registered = true;
@@ -261,6 +286,10 @@ var confirmNumberRegister = function(phone, isSIP, $dialog, $scope, RCommNumbers
 };
 
 var createNumberParams = function(number) {
+	createNumberParams(number, false)
+}
+
+var createNumberParams = function(number, isSIP) {
   var params = {};
 
   // Mandatory fields
@@ -274,17 +303,27 @@ var createNumberParams = function(number) {
 
   // Optional fields
   params["FriendlyName"] = number.friendly_name || number.friendlyName;
-  params["VoiceUrl"] = number.voice_url || number.voiceUrl;
+  params["VoiceApplicationSid"] = number.voice_application_sid; // || number.voiceApplicationSid;
+  params["VoiceUrl"] = number.voice_url; // || number.voiceUrl; - return "" as "". It will help the server clear values.
   params["VoiceMethod"] = number.voice_method || number.voiceMethod;
-  params["VoiceFallbackUrl"] = number.voice_fallback_url || number.voiceFallbackUrl;
+  params["VoiceFallbackUrl"] = number.voice_fallback_url; // || number.voiceFallbackUrl;
   params["VoiceFallbackMethod"] = number.voice_fallback_method || number.voiceFallbackMethod;
-  params["StatusCallback"] = number.status_callback_url || number.statusCallback;
+  params["StatusCallback"] = number.status_callback; // || number.statusCallback;
   params["StatusCallbackMethod"] = number.status_callback_method || number.statusCallbackMethod;
-  params["SmsUrl"] = number.sms_url || number.smsUrl;
+  params["SmsApplicationSid"] = number.sms_application_sid; // || number.smsApplicationSid;
+  params["SmsUrl"] = number.sms_url; // || number.smsUrl;
   params["SmsMethod"] = number.sms_method || number.smsMethod;
-  params["SmsFallbackUrl"] = number.sms_fallback_url || number.smsFallbackUrl;
+  params["SmsFallbackUrl"] = number.sms_fallback_url; // || number.smsFallbackUrl;
   params["SmsFallbackMethod"] = number.sms_fallback_method || number.smsFallbackMethod;
   params["VoiceCallerIdLookup"] = number.voice_caller_id_lookup || number.voiceCallerIdLookup;
+  params["UssdUrl"] = number.ussd_url;
+  params["UssdMethod"] = number.ussd_method;
+  params["UssdFallbackUrl"] = number.ussd_fallback_url;
+  params["UssdFallbackMethod"] = number.ussd_fallback_method;
+  params["UssdApplicationSid"] = number.ussd_application_sid;
+  if(isSIP) {
+	  params["isSIP"] = "true";
+  }
 
   for (var prop in params) {
     if (params.hasOwnProperty(prop) && params[prop] === undefined) {

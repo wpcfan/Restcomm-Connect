@@ -35,7 +35,7 @@ import javax.servlet.sip.SipServletResponse;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
-import org.mobicents.servlet.restcomm.mgcp.MediaGateway;
+import org.mobicents.servlet.restcomm.mscontrol.MediaServerControllerFactory;
 import org.mobicents.servlet.restcomm.ussd.telephony.UssdCallManager;
 
 import akka.actor.ActorRef;
@@ -46,6 +46,7 @@ import akka.actor.UntypedActorFactory;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
+ * @author <a href="mailto:gvagenas@gmail.com">gvagenas</a>
  */
 public final class CallManagerProxy extends SipServlet implements SipServletListener {
     private static final long serialVersionUID = 1L;
@@ -65,8 +66,10 @@ public final class CallManagerProxy extends SipServlet implements SipServletList
 
     @Override
     public void destroy() {
-        system.shutdown();
-        system.awaitTermination();
+        if (system != null) {
+            system.shutdown();
+            system.awaitTermination();
+        }
     }
 
     @Override
@@ -89,39 +92,52 @@ public final class CallManagerProxy extends SipServlet implements SipServletList
 
     @Override
     public void init(final ServletConfig config) throws ServletException {
+        super.init(config);
     }
 
-    private ActorRef manager(final Configuration configuration, final ServletContext context, final ActorRef gateway,
-            final ActorRef conferences, final ActorRef sms, final SipFactory factory, final DaoManager storage) {
+    private ActorRef manager(final Configuration configuration, final ServletContext context,
+            final MediaServerControllerFactory msControllerfactory, final ActorRef conferences, final ActorRef bridges,
+            final ActorRef sms, final SipFactory factory, final DaoManager storage) {
         return system.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
             public UntypedActor create() throws Exception {
-                return new CallManager(configuration, context, system, gateway, conferences, sms, factory, storage);
+                return new CallManager(configuration, context, system, msControllerfactory, conferences, bridges, sms, factory, storage);
             }
         }));
     }
 
-    private ActorRef ussdManager(final Configuration configuration, final ServletContext context, final ActorRef gateway,
-            final ActorRef conferences, final ActorRef sms, final SipFactory factory, final DaoManager storage) {
+    private ActorRef ussdManager(final Configuration configuration, final ServletContext context, final ActorRef conferences,
+            final ActorRef bridges, final ActorRef sms, final SipFactory factory, final DaoManager storage) {
         return system.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
             public UntypedActor create() throws Exception {
-                return new UssdCallManager(configuration, context, system, gateway, conferences, sms, factory, storage);
+                return new UssdCallManager(configuration, context, system, conferences, sms, factory, storage);
             }
         }));
     }
 
-    private ActorRef conferences(final ActorRef gateway) {
+    private ActorRef conferences(final MediaServerControllerFactory factory) {
         return system.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
             public UntypedActor create() throws Exception {
-                return new ConferenceCenter(gateway);
+                return new ConferenceCenter(factory);
+            }
+        }));
+    }
+
+    private ActorRef bridges(final MediaServerControllerFactory factory) {
+        return system.actorOf(new Props(new UntypedActorFactory() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public UntypedActor create() throws Exception {
+                return new BridgeManager(factory);
             }
         }));
     }
@@ -143,11 +159,6 @@ public final class CallManagerProxy extends SipServlet implements SipServletList
         return isUssd;
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see javax.servlet.sip.SipServletListener#servletInitialized(javax.servlet.sip.SipServletContextEvent)
-     */
     @Override
     public void servletInitialized(SipServletContextEvent event) {
         if (event.getSipServlet().getClass().equals(CallManagerProxy.class)) {
@@ -156,13 +167,15 @@ public final class CallManagerProxy extends SipServlet implements SipServletList
             configuration = (Configuration) context.getAttribute(Configuration.class.getName());
             system = (ActorSystem) context.getAttribute(ActorSystem.class.getName());
             final DaoManager storage = (DaoManager) context.getAttribute(DaoManager.class.getName());
-            final ActorRef gateway = (ActorRef) context.getAttribute(MediaGateway.class.getName());
+            final MediaServerControllerFactory mscontrolFactory = (MediaServerControllerFactory) context
+                    .getAttribute(MediaServerControllerFactory.class.getName());
             // Create the call manager.
             final SipFactory factory = (SipFactory) context.getAttribute(SIP_FACTORY);
-            final ActorRef conferences = conferences(gateway);
+            final ActorRef conferences = conferences(mscontrolFactory);
+            final ActorRef bridges = bridges(mscontrolFactory);
             final ActorRef sms = (ActorRef) context.getAttribute("org.mobicents.servlet.restcomm.sms.SmsService");
-            manager = manager(configuration, context, gateway, conferences, sms, factory, storage);
-            ussdManager = ussdManager(configuration, context, gateway, conferences, sms, factory, storage);
+            manager = manager(configuration, context, mscontrolFactory, conferences, bridges, sms, factory, storage);
+            ussdManager = ussdManager(configuration, context, conferences, bridges, sms, factory, storage);
             context.setAttribute(CallManager.class.getName(), manager);
             context.setAttribute(UssdCallManager.class.getName(), ussdManager);
         }

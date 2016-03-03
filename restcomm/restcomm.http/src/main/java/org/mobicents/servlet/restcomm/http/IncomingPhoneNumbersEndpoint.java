@@ -148,8 +148,26 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
         builder.setSid(sid);
         builder.setAccountSid(accountSid);
         String phoneNumber = data.getFirst("PhoneNumber");
+        String cost = data.getFirst("Cost");
         builder.setPhoneNumber(phoneNumber);
         builder.setFriendlyName(getFriendlyName(phoneNumber, data));
+        if (data.containsKey("VoiceCapable")) {
+            builder.setVoiceCapable(Boolean.parseBoolean(data.getFirst("VoiceCapable")));
+        }
+        if (data.containsKey("SmsCapable")) {
+            builder.setSmsCapable(Boolean.parseBoolean(data.getFirst("SmsCapable")));
+        }
+        if (data.containsKey("MmsCapable")) {
+            builder.setMmsCapable(Boolean.parseBoolean(data.getFirst("MmsCapable")));
+        }
+        if (data.containsKey("FaxCapable")) {
+            builder.setFaxCapable(Boolean.parseBoolean(data.getFirst("FaxCapable")));
+        }
+        if (data.containsKey("isSIP")) {
+            builder.setPureSip(Boolean.parseBoolean(data.getFirst("isSIP")));
+        } else {
+            builder.setPureSip(false);
+        }
         final String apiVersion = getApiVersion(data);
         builder.setApiVersion(apiVersion);
         builder.setVoiceUrl(getUrl("VoiceUrl", data));
@@ -165,6 +183,13 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
         builder.setSmsFallbackUrl(getUrl("SmsFallbackUrl", data));
         builder.setSmsFallbackMethod(getMethod("SmsFallbackMethod", data));
         builder.setSmsApplicationSid(getSid("SmsApplicationSid", data));
+
+        builder.setUssdUrl(getUrl("UssdUrl", data));
+        builder.setUssdMethod(getMethod("UssdMethod", data));
+        builder.setUssdFallbackUrl(getUrl("UssdFallbackUrl", data));
+        builder.setUssdFallbackMethod(getMethod("UssdFallbackMethod",data));
+        builder.setUssdApplicationSid(getSid("UssdApplicationSid",data));
+
         final Configuration configuration = this.configuration.subset("runtime-settings");
         String rootUri = configuration.getString("root-uri");
         rootUri = StringUtils.addSuffixIfNotPresent(rootUri, "/");
@@ -206,6 +231,11 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
         if (incomingPhoneNumber == null) {
             return status(NOT_FOUND).build();
         } else {
+            try {
+                secureLevelControl(accountsDao, accountSid, String.valueOf(incomingPhoneNumber.getAccountSid()));
+            } catch (AuthorizationException e) {
+                return status(UNAUTHORIZED).build();
+            }
             if (APPLICATION_JSON_TYPE == responseType) {
                 return ok(gson.toJson(incomingPhoneNumber), APPLICATION_JSON).build();
             } else if (APPLICATION_XML_TYPE == responseType) {
@@ -242,6 +272,7 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             PhoneNumberType phoneNumberType, final MediaType responseType) {
         try {
             secure(accountsDao.getAccount(accountSid), "RestComm:Read:IncomingPhoneNumbers");
+            secureLevelControl(accountsDao, accountSid, null);
         } catch (final AuthorizationException exception) {
             return status(UNAUTHORIZED).build();
         }
@@ -262,6 +293,7 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             PhoneNumberType phoneNumberType, final MediaType responseType) {
         try {
             secure(accountsDao.getAccount(accountSid), "RestComm:Create:IncomingPhoneNumbers");
+            secureLevelControl(accountsDao, accountSid, null);
         } catch (final AuthorizationException exception) {
             return status(UNAUTHORIZED).build();
         }
@@ -271,22 +303,32 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             return status(BAD_REQUEST).entity(exception.getMessage()).build();
         }
         String number = data.getFirst("PhoneNumber");
+        String isSIP = data.getFirst("isSIP");
         // cater to SIP numbers
-        boolean isRealNumber = true;
-        try {
-            number = e164(number);
-        } catch (NumberParseException e) {
-            isRealNumber = false;
+        if(isSIP == null) {
+            try {
+                number = e164(number);
+            } catch (NumberParseException e) {}
         }
         IncomingPhoneNumber incomingPhoneNumber = dao.getIncomingPhoneNumber(number);
         if (incomingPhoneNumber == null) {
             incomingPhoneNumber = createFrom(new Sid(accountSid), data);
             phoneNumberParameters.setPhoneNumberType(phoneNumberType);
-            boolean isDidAssigned = true;
-            if(isRealNumber) {
-                isDidAssigned = phoneNumberProvisioningManager.buyNumber(number, phoneNumberParameters);
+
+            org.mobicents.servlet.restcomm.provisioning.number.api.PhoneNumber phoneNumber = convertIncomingPhoneNumbertoPhoneNumber(incomingPhoneNumber);
+            boolean hasSuceeded = false;
+            if(phoneNumberProvisioningManager != null && isSIP == null) {
+                hasSuceeded = phoneNumberProvisioningManager.buyNumber(phoneNumber, phoneNumberParameters);
+            } else if (isSIP != null) {
+                hasSuceeded = true;
             }
-            if(isDidAssigned) {
+            if(hasSuceeded) {
+                if(phoneNumber.getFriendlyName() != null) {
+                    incomingPhoneNumber.setFriendlyName(phoneNumber.getFriendlyName());
+                }
+                if(phoneNumber.getPhoneNumber() != null) {
+                    incomingPhoneNumber.setPhoneNumber(phoneNumber.getPhoneNumber());
+                }
                 dao.addIncomingPhoneNumber(incomingPhoneNumber);
                 if (APPLICATION_JSON_TYPE == responseType) {
                     return ok(gson.toJson(incomingPhoneNumber), APPLICATION_JSON).build();
@@ -307,17 +349,14 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             return status(UNAUTHORIZED).build();
         }
         final IncomingPhoneNumber incomingPhoneNumber = dao.getIncomingPhoneNumber(new Sid(sid));
-        String number = incomingPhoneNumber.getPhoneNumber();
-        // cater to SIP numbers
-        boolean isRealNumber = true;
         try {
-            number = e164(number);
-        } catch (NumberParseException e) {
-            isRealNumber = false;
+            secureLevelControl(accountsDao, accountSid, String.valueOf(incomingPhoneNumber.getAccountSid()));
+        } catch (AuthorizationException e) {
+            return status(UNAUTHORIZED).build();
         }
         boolean updated = true;
-        if(isRealNumber) {
-            updated = phoneNumberProvisioningManager.updateNumber(incomingPhoneNumber.getPhoneNumber(), phoneNumberParameters);
+        if(phoneNumberProvisioningManager != null && (incomingPhoneNumber.isPureSip() == null || !incomingPhoneNumber.isPureSip())) {
+            updated = phoneNumberProvisioningManager.updateNumber(convertIncomingPhoneNumbertoPhoneNumber(incomingPhoneNumber), phoneNumberParameters);
         }
         if(updated) {
             dao.updateIncomingPhoneNumber(update(incomingPhoneNumber, data));
@@ -347,19 +386,23 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             incomingPhoneNumber.setFriendlyName(data.getFirst("FriendlyName"));
         }
         if (data.containsKey("VoiceUrl")) {
-            incomingPhoneNumber.setVoiceUrl(getUrl("VoiceUrl", data));
+            // for all values that qualify as 'empty' populate property with null
+            URI uri = getUrl("VoiceUrl", data);
+            incomingPhoneNumber.setVoiceUrl(isEmpty(uri.toString()) ? null : uri);
         }
         if (data.containsKey("VoiceMethod")) {
             incomingPhoneNumber.setVoiceMethod(getMethod("VoiceMethod", data));
         }
         if (data.containsKey("VoiceFallbackUrl")) {
-            incomingPhoneNumber.setVoiceFallbackUrl(getUrl("VoiceFallbackUrl", data));
+            URI uri = getUrl("VoiceFallbackUrl", data);
+            incomingPhoneNumber.setVoiceFallbackUrl( isEmpty(uri.toString()) ? null : uri );
         }
         if (data.containsKey("VoiceFallbackMethod")) {
-            incomingPhoneNumber.setVoiceFallbackMethod(getMethod("VoiceFallbackMethod", data));
+            incomingPhoneNumber.setVoiceFallbackMethod( getMethod("VoiceFallbackMethod", data) );
         }
         if (data.containsKey("StatusCallback")) {
-            incomingPhoneNumber.setStatusCallback(getUrl("StatusCallback", data));
+            URI uri = getUrl("StatusCallback", data);
+            incomingPhoneNumber.setStatusCallback( isEmpty(uri.toString()) ? null : uri );
         }
         if (data.containsKey("StatusCallbackMethod")) {
             incomingPhoneNumber.setStatusCallbackMethod(getMethod("StatusCallbackMethod", data));
@@ -368,22 +411,31 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             incomingPhoneNumber.setHasVoiceCallerIdLookup(getHasVoiceCallerIdLookup(data));
         }
         if (data.containsKey("VoiceApplicationSid")) {
-            incomingPhoneNumber.setVoiceApplicationSid(getSid("VoiceApplicationSid", data));
+            if ( org.apache.commons.lang.StringUtils.isEmpty( data.getFirst("VoiceApplicationSid") ) )
+                incomingPhoneNumber.setVoiceApplicationSid(null);
+            else
+                incomingPhoneNumber.setVoiceApplicationSid(getSid("VoiceApplicationSid", data));
         }
         if (data.containsKey("SmsUrl")) {
-            incomingPhoneNumber.setSmsUrl(getUrl("SmsUrl", data));
+            URI uri = getUrl("SmsUrl", data);
+            incomingPhoneNumber.setSmsUrl( isEmpty(uri.toString()) ? null : uri);
         }
         if (data.containsKey("SmsMethod")) {
             incomingPhoneNumber.setSmsMethod(getMethod("SmsMethod", data));
         }
         if (data.containsKey("SmsFallbackUrl")) {
-            incomingPhoneNumber.setSmsFallbackUrl(getUrl("SmsFallbackUrl", data));
+            URI uri = getUrl("SmsFallbackUrl", data);
+            incomingPhoneNumber.setSmsFallbackUrl( isEmpty(uri.toString()) ? null : uri );
         }
         if (data.containsKey("SmsFallbackMethod")) {
             incomingPhoneNumber.setSmsFallbackMethod(getMethod("SmsFallbackMethod", data));
         }
         if (data.containsKey("SmsApplicationSid")) {
-            incomingPhoneNumber.setSmsApplicationSid(getSid("SmsApplicationSid", data));
+            if ( org.apache.commons.lang.StringUtils.isEmpty( data.getFirst("SmsApplicationSid") ) )
+                incomingPhoneNumber.setSmsApplicationSid(null);
+            else
+                incomingPhoneNumber.setSmsApplicationSid(getSid("SmsApplicationSid", data));
+
         }
 
         if (data.containsKey("VoiceCapable")) {
@@ -402,6 +454,31 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             incomingPhoneNumber.setFaxCapable(Boolean.parseBoolean(data.getFirst("FaxCapable")));
         }
 
+        if (data.containsKey("UssdUrl")) {
+            URI uri = getUrl("UssdUrl", data);
+            incomingPhoneNumber.setUssdUrl(isEmpty(uri.toString()) ? null : uri);
+        }
+
+        if (data.containsKey("UssdMethod")) {
+            incomingPhoneNumber.setUssdMethod(getMethod("UssdMethod", data));
+        }
+
+        if (data.containsKey("UssdFallbackUrl")) {
+            URI uri = getUrl("UssdFallbackUrl", data);
+            incomingPhoneNumber.setUssdFallbackUrl(isEmpty(uri.toString()) ? null : uri);
+        }
+
+        if (data.containsKey("UssdFallbackMethod")) {
+            incomingPhoneNumber.setUssdFallbackMethod(getMethod("UssdFallbackMethod", data));
+        }
+
+        if (data.containsKey("UssdApplicationSid")) {
+            if (org.apache.commons.lang.StringUtils.isEmpty(data.getFirst("UssdApplicationSid")))
+                incomingPhoneNumber.setUssdApplicationSid(null);
+            else
+                incomingPhoneNumber.setUssdApplicationSid(getSid("UssdApplicationSid", data));
+        }
+
         incomingPhoneNumber.setDateUpdated(DateTime.now());
         return incomingPhoneNumber;
     }
@@ -413,16 +490,13 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
             return status(UNAUTHORIZED).build();
         }
         final IncomingPhoneNumber incomingPhoneNumber = dao.getIncomingPhoneNumber(new Sid(sid));
-        String number = incomingPhoneNumber.getPhoneNumber();
-        // cater to SIP numbers
-        boolean isRealNumber = true;
         try {
-            number = e164(number);
-        } catch (NumberParseException e) {
-            isRealNumber = false;
+            secureLevelControl(accountsDao, accountSid, String.valueOf(incomingPhoneNumber.getAccountSid()));
+        } catch (AuthorizationException e) {
+            return status(UNAUTHORIZED).build();
         }
-        if(isRealNumber) {
-            phoneNumberProvisioningManager.cancelNumber(number);
+        if(phoneNumberProvisioningManager != null && (incomingPhoneNumber.isPureSip() == null || !incomingPhoneNumber.isPureSip())) {
+            phoneNumberProvisioningManager.cancelNumber(convertIncomingPhoneNumbertoPhoneNumber(incomingPhoneNumber));
         }
         dao.removeIncomingPhoneNumber(new Sid(sid));
         return noContent().build();
@@ -432,5 +506,24 @@ public abstract class IncomingPhoneNumbersEndpoint extends AbstractEndpoint {
     private List<SipURI> getOutboundInterfaces() {
         final List<SipURI> uris = (List<SipURI>) context.getAttribute(SipServlet.OUTBOUND_INTERFACES);
         return uris;
+    }
+
+    protected org.mobicents.servlet.restcomm.provisioning.number.api.PhoneNumber convertIncomingPhoneNumbertoPhoneNumber(IncomingPhoneNumber incomingPhoneNumber) {
+        return new org.mobicents.servlet.restcomm.provisioning.number.api.PhoneNumber(
+                incomingPhoneNumber.getFriendlyName(),
+                incomingPhoneNumber.getPhoneNumber(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                incomingPhoneNumber.isVoiceCapable(),
+                incomingPhoneNumber.isSmsCapable(),
+                incomingPhoneNumber.isMmsCapable(),
+                incomingPhoneNumber.isFaxCapable(),
+                false);
     }
 }

@@ -50,8 +50,9 @@ import org.joda.time.DateTime;
 import org.mobicents.servlet.restcomm.dao.CallDetailRecordsDao;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
 import org.mobicents.servlet.restcomm.dao.NotificationsDao;
-import org.mobicents.servlet.restcomm.email.Mail;
-import org.mobicents.servlet.restcomm.email.MailMan;
+import org.mobicents.servlet.restcomm.email.EmailService;
+import org.mobicents.servlet.restcomm.api.EmailRequest;
+import org.mobicents.servlet.restcomm.api.Mail;
 import org.mobicents.servlet.restcomm.entities.CallDetailRecord;
 import org.mobicents.servlet.restcomm.entities.Notification;
 import org.mobicents.servlet.restcomm.entities.Sid;
@@ -69,6 +70,7 @@ import org.mobicents.servlet.restcomm.interpreter.rcml.Attribute;
 import org.mobicents.servlet.restcomm.interpreter.rcml.End;
 import org.mobicents.servlet.restcomm.interpreter.rcml.GetNextVerb;
 import org.mobicents.servlet.restcomm.interpreter.rcml.Parser;
+import org.mobicents.servlet.restcomm.interpreter.rcml.ParserFailed;
 import org.mobicents.servlet.restcomm.interpreter.rcml.Tag;
 import org.mobicents.servlet.restcomm.patterns.Observe;
 import org.mobicents.servlet.restcomm.telephony.Answer;
@@ -83,6 +85,7 @@ import org.mobicents.servlet.restcomm.ussd.commons.UssdRestcommResponse;
 import org.mobicents.servlet.restcomm.util.UriUtils;
 
 import akka.actor.ActorRef;
+import akka.actor.Actor;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.actor.UntypedActorContext;
@@ -101,8 +104,7 @@ public class UssdInterpreter extends UntypedActor {
     static final int ERROR_NOTIFICATION = 0;
     static final int WARNING_NOTIFICATION = 1;
     static final Pattern PATTERN = Pattern.compile("[\\*#0-9]{1,12}");
-    static final String EMAIL_SENDER = "restcomm@restcomm.org";
-    static final String EMAIL_SUBJECT = "RestComm Error Notification - Attention Required";
+    static String EMAIL_SENDER;
 
     // States for the FSM.
     // ==========================
@@ -147,7 +149,7 @@ public class UssdInterpreter extends UntypedActor {
     Tag verb;
     DaoManager storage = null;
     final Set<Transition> transitions = new HashSet<Transition>();
-    ActorRef mailer = null;
+    ActorRef mailerNotify = null;
     URI url;
     String method;
     URI fallbackUrl;
@@ -227,7 +229,6 @@ public class UssdInterpreter extends UntypedActor {
         this.configuration = configuration;
 
         this.storage = storage;
-        this.mailer = mailer(configuration.subset("smtp"));
         final Configuration runtime = configuration.subset("runtime-settings");
         String path = runtime.getString("cache-path");
         if (!path.endsWith("/")) {
@@ -291,8 +292,8 @@ public class UssdInterpreter extends UntypedActor {
             private static final long serialVersionUID = 1L;
 
             @Override
-            public UntypedActor create() throws Exception {
-                return new MailMan(configuration);
+            public Actor create() throws Exception {
+                return new EmailService(configuration);
             }
         }));
     }
@@ -316,7 +317,7 @@ public class UssdInterpreter extends UntypedActor {
 
             @Override
             public UntypedActor create() throws Exception {
-                return new Parser(xml);
+                return new Parser(xml, self());
             }
         }));
     }
@@ -382,6 +383,7 @@ public class UssdInterpreter extends UntypedActor {
         if (emailAddress == null || emailAddress.isEmpty()) {
             return;
         }
+        final String EMAIL_SUBJECT = "RestComm Error Notification - Attention Required";
         final StringBuilder buffer = new StringBuilder();
         buffer.append("<strong>").append("Sid: ").append("</strong></br>");
         buffer.append(notification.getSid().toString()).append("</br>");
@@ -411,8 +413,11 @@ public class UssdInterpreter extends UntypedActor {
         buffer.append(notification.getResponseHeaders()).append("</br>");
         buffer.append("<strong>").append("Response Body: ").append("</strong></br>");
         buffer.append(notification.getResponseBody()).append("</br>");
-        final Mail email = new Mail(EMAIL_SENDER, emailAddress, EMAIL_SUBJECT, buffer.toString());
-        mailer.tell(email, self());
+        final Mail emailMsg = new Mail(EMAIL_SENDER,emailAddress,EMAIL_SUBJECT, buffer.toString());
+        if (mailerNotify == null){
+            mailerNotify = mailer(configuration.subset("smtp-notify"));
+        }
+        mailerNotify.tell(new EmailRequest(emailMsg), self());
     }
 
     void callback() {
@@ -511,6 +516,9 @@ public class UssdInterpreter extends UntypedActor {
                     fsm.transition(message, finished);
                 }
             }
+        } else if (ParserFailed.class.equals(klass)) {
+            logger.info("ParserFailed received. Will stop the call");
+            fsm.transition(message, cancelling);
         } else if (Tag.class.equals(klass)) {
             final Tag verb = (Tag) message;
             if (ussdLanguage.equals(verb.name())) {
@@ -693,7 +701,7 @@ public class UssdInterpreter extends UntypedActor {
                 } else if (type.contains("text/plain")) {
                     parser = parser("<UssdMessage>" + response.getContentAsString() + "</UssdMessage>");
                 } else {
-                    final StopInterpreter stop = StopInterpreter.instance();
+                    final StopInterpreter stop = new StopInterpreter();
                     source.tell(stop, source);
                     return;
                 }
@@ -857,7 +865,7 @@ public class UssdInterpreter extends UntypedActor {
                             + " is an invalid URI.");
                     notifications.addNotification(notification);
                     sendMail(notification);
-                    final StopInterpreter stop = StopInterpreter.instance();
+                    final StopInterpreter stop = new StopInterpreter();
                     source.tell(stop, source);
                     return;
                 }
@@ -980,8 +988,8 @@ public class UssdInterpreter extends UntypedActor {
             getContext().stop(downloader);
         if (parser != null)
             getContext().stop(parser);
-        if (mailer != null)
-            getContext().stop(mailer);
+        if (mailerNotify != null)
+            getContext().stop(mailerNotify);
         super.postStop();
     }
 

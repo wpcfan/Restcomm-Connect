@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.telestax.servlet</groupId>
 		<artifactId>restcomm</artifactId>
-		<version>7.2.2-SNAPSHOT</version>
+		<version>7.6.0-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>restcomm.application</artifactId>
@@ -56,13 +56,6 @@
 			<groupId>commons-configuration</groupId>
 			<artifactId>commons-configuration</artifactId>
 		</dependency>
-
-		<dependency>
-			<groupId>commons-lang</groupId>
-			<artifactId>commons-lang</artifactId>
-			<version>2.6</version>
-		</dependency>
-
 
 		<dependency>
 			<groupId>javax.mail</groupId>
@@ -159,6 +152,12 @@
             <artifactId>restcomm.provisioning.number.bandwidth</artifactId>
             <version>${project.version}</version>
         </dependency>
+        
+        <dependency>
+            <groupId>com.telestax.servlet</groupId>
+            <artifactId>restcomm.provisioning.number.voxbone</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
 		<dependency>
 			<groupId>com.telestax.servlet</groupId>
@@ -174,7 +173,19 @@
 
 		<dependency>
 			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.tts.acapela</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
 			<artifactId>restcomm.tts.voicerss</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.tts.att</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
@@ -186,7 +197,37 @@
 
 		<dependency>
 			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.mgcp</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
 			<artifactId>restcomm.ussd</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.mscontrol.api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.mscontrol.mms</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.mscontrol.jsr309</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.telestax.servlet</groupId>
+			<artifactId>restcomm.monitoring.service</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
@@ -200,7 +241,6 @@
 		<dependency>
 			<groupId>org.hsqldb</groupId>
 			<artifactId>hsqldb</artifactId>
-			<version>1.8.0.10</version>
 		</dependency>
 
 	</dependencies>

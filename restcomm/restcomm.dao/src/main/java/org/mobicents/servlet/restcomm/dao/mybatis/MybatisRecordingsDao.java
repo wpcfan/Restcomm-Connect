@@ -19,7 +19,17 @@
  */
 package org.mobicents.servlet.restcomm.dao.mybatis;
 
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.readDateTime;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.readDouble;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.readSid;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.readString;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.readUri;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.writeDateTime;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.writeSid;
+import static org.mobicents.servlet.restcomm.dao.DaoUtils.writeUri;
+
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,14 +37,13 @@ import java.util.Map;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
-
 import org.joda.time.DateTime;
-
-import static org.mobicents.servlet.restcomm.dao.DaoUtils.*;
+import org.mobicents.servlet.restcomm.amazonS3.S3AccessTool;
+import org.mobicents.servlet.restcomm.annotations.concurrency.ThreadSafe;
 import org.mobicents.servlet.restcomm.dao.RecordingsDao;
 import org.mobicents.servlet.restcomm.entities.Recording;
 import org.mobicents.servlet.restcomm.entities.Sid;
-import org.mobicents.servlet.restcomm.annotations.concurrency.ThreadSafe;
+import org.mobicents.servlet.restcomm.util.UriUtils;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -43,14 +52,31 @@ import org.mobicents.servlet.restcomm.annotations.concurrency.ThreadSafe;
 public final class MybatisRecordingsDao implements RecordingsDao {
     private static final String namespace = "org.mobicents.servlet.sip.restcomm.dao.RecordingsDao.";
     private final SqlSessionFactory sessions;
+    private S3AccessTool s3AccessTool;
+    private String recordingPath;
 
     public MybatisRecordingsDao(final SqlSessionFactory sessions) {
         super();
         this.sessions = sessions;
     }
 
+    public MybatisRecordingsDao(final SqlSessionFactory sessions, final S3AccessTool s3AccessTool, final String recordingPath) {
+        super();
+        this.sessions = sessions;
+        this.s3AccessTool = s3AccessTool;
+        this.recordingPath = recordingPath;
+    }
+
     @Override
-    public void addRecording(final Recording recording) {
+    public void addRecording(Recording recording) {
+        if (s3AccessTool != null) {
+            URI s3Uri = s3AccessTool.uploadFile(recordingPath+"/"+recording.getSid().toString()+".wav");
+            if (s3Uri != null) {
+                recording = recording.updateFileUri(s3Uri);
+            }
+        } else {
+            recording = recording.updateFileUri(generateLocalFileUri("/restcomm/recordings/" + recording.getSid()));
+        }
         final SqlSession session = sessions.openSession();
         try {
             session.insert(namespace + "addRecording", toMap(recording));
@@ -58,6 +84,15 @@ public final class MybatisRecordingsDao implements RecordingsDao {
         } finally {
             session.close();
         }
+    }
+
+    public URI generateLocalFileUri(String recordingRelativeUri) {
+        URI uriToResolve = null;
+        try {
+            //For local stored recordings, add .wav suffix to the URI
+            uriToResolve = new URI(recordingRelativeUri+".wav");
+        } catch (URISyntaxException e) {}
+        return UriUtils.resolve(uriToResolve);
     }
 
     @Override
@@ -68,6 +103,23 @@ public final class MybatisRecordingsDao implements RecordingsDao {
     @Override
     public Recording getRecordingByCall(final Sid callSid) {
         return getRecording(namespace + "getRecordingByCall", callSid);
+    }
+
+    @Override
+    public List<Recording> getRecordingsByCall(Sid callSid) {
+        final SqlSession session = sessions.openSession();
+        try {
+            final List<Map<String, Object>> results = session.selectList(namespace + "getRecordingsByCall", callSid.toString());
+            final List<Recording> recordings = new ArrayList<Recording>();
+            if (results != null && !results.isEmpty()) {
+                for (final Map<String, Object> result : results) {
+                    recordings.add(toRecording(result));
+                }
+            }
+            return recordings;
+        } finally {
+            session.close();
+        }
     }
 
     private Recording getRecording(final String selector, final Sid sid) {
@@ -131,6 +183,7 @@ public final class MybatisRecordingsDao implements RecordingsDao {
         map.put("duration", recording.getDuration());
         map.put("api_version", recording.getApiVersion());
         map.put("uri", writeUri(recording.getUri()));
+        map.put("file_uri", writeUri(recording.getFileUri()));
         return map;
     }
 
@@ -143,6 +196,12 @@ public final class MybatisRecordingsDao implements RecordingsDao {
         final Double duration = readDouble(map.get("duration"));
         final String apiVersion = readString(map.get("api_version"));
         final URI uri = readUri(map.get("uri"));
-        return new Recording(sid, dateCreated, dateUpdated, accountSid, callSid, duration, apiVersion, uri);
+        //For backward compatibility. For old an database that we upgraded to the latest schema, the file_uri will be null so we need
+        //to create the file_uri on the fly
+        String fileUri = (String) map.get("file_uri");
+        if (fileUri == null || fileUri.isEmpty()) {
+            fileUri = generateLocalFileUri("/restcomm/recordings/" + sid).toString();
+        }
+        return new Recording(sid, dateCreated, dateUpdated, accountSid, callSid, duration, apiVersion, uri, readUri(fileUri));
     }
 }

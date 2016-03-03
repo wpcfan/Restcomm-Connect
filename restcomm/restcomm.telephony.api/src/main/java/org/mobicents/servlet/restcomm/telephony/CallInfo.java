@@ -19,6 +19,7 @@
  */
 package org.mobicents.servlet.restcomm.telephony;
 
+import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 
 import org.joda.time.DateTime;
@@ -33,19 +34,22 @@ import org.mobicents.servlet.restcomm.telephony.CallStateChanged.State;
 @Immutable
 public final class CallInfo {
     private final Sid sid;
-    private final State state;
+    private State state;
     private final CreateCall.Type type;
     private final String direction;
     private final DateTime dateCreated;
+    private final DateTime dateConUpdated;
     private final String forwardedFrom;
     private final String fromName;
     private final String from;
     private final String to;
+    private final SipServletRequest invite;
     private final SipServletResponse lastResponse;
+    private final boolean webrtc;
 
     public CallInfo(final Sid sid, final State state, final CreateCall.Type type, final String direction,
             final DateTime dateCreated, final String forwardedFrom, final String fromName, final String from, final String to,
-            final SipServletResponse lastResponse) {
+            final SipServletRequest invite, final SipServletResponse lastResponse,final boolean webrtc, final DateTime dateConUpdated) {
         super();
         this.sid = sid;
         this.state = state;
@@ -55,12 +59,19 @@ public final class CallInfo {
         this.fromName = fromName;
         this.from = from;
         this.to = to;
+        this.invite = invite;
         this.lastResponse = lastResponse;
+        this.dateConUpdated = dateConUpdated;
         this.type = type;
+        this.webrtc = webrtc;
     }
 
     public DateTime dateCreated() {
         return dateCreated;
+    }
+
+    public DateTime dateConUpdated() {
+        return dateConUpdated;
     }
 
     public String direction() {
@@ -91,11 +102,24 @@ public final class CallInfo {
         return state;
     }
 
+    public void setState(State state) {
+        this.state = state;
+    }
+
     public String to() {
         return to;
+    }
+
+    public SipServletRequest invite() {
+        return invite;
     }
 
     public SipServletResponse lastResponse() {
         return lastResponse;
     }
+
+    public boolean isWebrtc() {
+        return webrtc;
+    }
+
 }

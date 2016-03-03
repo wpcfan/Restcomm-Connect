@@ -1,5 +1,6 @@
 package org.mobicents.servlet.restcomm.http;
 
+import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URL;
@@ -155,7 +156,7 @@ public class CallsEndpointTest {
     @Test
     public void getCallsListFilteredByStartTime() {
         Map<String, String> filters = new HashMap<String, String>();
-        filters.put("StartTime", "2013-09-10");
+        filters.put("StartTime", "2013-08-23 14:30:07.820000000");
         JsonObject allCalls = RestcommCallsTool.getInstance().getCalls(deploymentUrl.toString(), adminAccountSid,
                 adminAuthToken);
 
@@ -181,7 +182,7 @@ public class CallsEndpointTest {
     @Test
     public void getCallsListFilteredUsingMultipleFilters() {
         Map<String, String> filters = new HashMap<String, String>();
-        filters.put("StartTime", "2013-09-10");
+        filters.put("StartTime", "2013-08-23 14:30:07.820000000");
         filters.put("To", "1512600%");
         filters.put("From", "3021097%");
         filters.put("Status", "in-progress");
@@ -195,6 +196,19 @@ public class CallsEndpointTest {
         assertTrue(filteredCallsUsingMultipleFilters.get("calls").getAsJsonArray().size() > 0);
         assertTrue(allCalls.get("calls").getAsJsonArray().size() > filteredCallsUsingMultipleFilters.get("calls")
                 .getAsJsonArray().size());
+    }
+
+    @Test
+    public void getCallRecordingsList() {
+        String callWithRecordingsSid = "CAfe9ce46f104f4beeb10c83a5dad2be66";
+        JsonArray callRecordings = RestcommCallsTool.getInstance().getCallRecordings(deploymentUrl.toString(), adminAccountSid,
+                adminAuthToken, callWithRecordingsSid );
+        assertEquals("Call recordings size() should be 1", 1, callRecordings.size());
+
+        String callWithoutRecordings = "CAfd82074503754b80aa8555199dfcc703";
+        callRecordings = RestcommCallsTool.getInstance().getCallRecordings(deploymentUrl.toString(), adminAccountSid,
+                adminAuthToken, callWithoutRecordings );
+        assertEquals("Call recordings size() should be 0", 0, callRecordings.size());
     }
 
     @Deployment(name = "ClientsEndpointTest", managed = true, testable = false)

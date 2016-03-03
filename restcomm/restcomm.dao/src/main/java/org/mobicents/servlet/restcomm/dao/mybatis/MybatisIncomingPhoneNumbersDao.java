@@ -111,6 +111,23 @@ public final class MybatisIncomingPhoneNumbersDao implements IncomingPhoneNumber
     }
 
     @Override
+    public List<IncomingPhoneNumber> getAllIncomingPhoneNumbers() {
+        final SqlSession session = sessions.openSession();
+        try {
+            final List<Map<String, Object>> results = session.selectList(namespace + "getAllIncomingPhoneNumbers");
+            final List<IncomingPhoneNumber> incomingPhoneNumbers = new ArrayList<IncomingPhoneNumber>();
+            if (results != null && !results.isEmpty()) {
+                for (final Map<String, Object> result : results) {
+                    incomingPhoneNumbers.add(toIncomingPhoneNumber(result));
+                }
+            }
+            return incomingPhoneNumbers;
+        } finally {
+            session.close();
+        }
+    }
+
+    @Override
     public List<IncomingPhoneNumber> getIncomingPhoneNumbersByFilter(IncomingPhoneNumberFilter filter) {
         final SqlSession session = sessions.openSession();
         try {
@@ -190,10 +207,12 @@ public final class MybatisIncomingPhoneNumbersDao implements IncomingPhoneNumber
         final Boolean smsCapable = readBoolean(map.get("sms_capable"));
         final Boolean mmsCapable = readBoolean(map.get("mms_capable"));
         final Boolean faxCapable = readBoolean(map.get("fax_capable"));
-        return new IncomingPhoneNumber(sid, dateCreated, dateUpdated, friendlyName, accountSid, phoneNumber, apiVersion,
+        final Boolean pureSip = readBoolean(map.get("pure_sip"));
+        final String cost = readString(map.get("cost"));
+        return new IncomingPhoneNumber(sid, dateCreated, dateUpdated, friendlyName, accountSid, phoneNumber, cost, apiVersion,
                 hasVoiceCallerIdLookup, voiceUrl, voiceMethod, voiceFallbackUrl, voiceFallbackMethod, statusCallback,
                 statusCallbackMethod, voiceApplicationSid, smsUrl, smsMethod, smsFallbackUrl, smsFallbackMethod,
-                smsApplicationSid, uri, ussdUrl, ussdMethod, ussdFallbackUrl, ussdFallbackMethod, ussdApplicationSid, voiceCapable, smsCapable, mmsCapable, faxCapable);
+                smsApplicationSid, uri, ussdUrl, ussdMethod, ussdFallbackUrl, ussdFallbackMethod, ussdApplicationSid, voiceCapable, smsCapable, mmsCapable, faxCapable, pureSip);
     }
 
     private Map<String, Object> toMap(final IncomingPhoneNumber incomingPhoneNumber) {
@@ -228,6 +247,8 @@ public final class MybatisIncomingPhoneNumbersDao implements IncomingPhoneNumber
         map.put("sms_capable", incomingPhoneNumber.isSmsCapable());
         map.put("mms_capable", incomingPhoneNumber.isMmsCapable());
         map.put("fax_capable", incomingPhoneNumber.isFaxCapable());
+        map.put("pure_sip", incomingPhoneNumber.isPureSip());
+        map.put("cost", incomingPhoneNumber.getCost());
         return map;
     }
 }

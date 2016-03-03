@@ -9,3 +9,5 @@ bin/
 *.class
 logs
 bin
+.DS_Store
+**/*~

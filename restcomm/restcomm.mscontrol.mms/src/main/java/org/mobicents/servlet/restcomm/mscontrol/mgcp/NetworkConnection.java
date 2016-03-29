@@ -109,6 +109,7 @@ public class NetworkConnection extends UntypedActor {
 
     // Call State
     private final List<ActorRef> observers;
+    private ConnectionMode connectionMode;
     private volatile boolean outbound;
     private volatile boolean webrtc;
     private volatile boolean joined;
@@ -181,6 +182,7 @@ public class NetworkConnection extends UntypedActor {
         this.webrtc = false;
         this.joined = false;
         this.close = false;
+        this.connectionMode = ConnectionMode.Inactive;
         this.localDescription = "";
         this.remoteDescription = "";
     }
@@ -268,9 +270,11 @@ public class NetworkConnection extends UntypedActor {
     private void onCreateNetworkConnection(CreateNetworkConnection message, ActorRef self, ActorRef sender) throws Exception {
         if (is(uninitialized)) {
             this.remoteDescription = message.getSessionDescription();
+            this.connectionMode = message.getConnectionMode();
+            this.outbound = message.isOutbound();
+            this.webrtc = message.isWebrtc();
             this.fsm.transition(message, acquiringBridge);
         }
-
     }
 
     private void onMediaGatewayResponse(MediaGatewayResponse<?> message, ActorRef self, ActorRef sender) throws Exception {

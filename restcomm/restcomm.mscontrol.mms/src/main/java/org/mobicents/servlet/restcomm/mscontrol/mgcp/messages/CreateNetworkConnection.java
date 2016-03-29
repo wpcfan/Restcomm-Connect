@@ -21,6 +21,8 @@
 
 package org.mobicents.servlet.restcomm.mscontrol.mgcp.messages;
 
+import jain.protocol.ip.mgcp.message.parms.ConnectionMode;
+
 /**
  * @author Henrique Rosa (henrique.rosa@telestax.com)
  *
@@ -28,17 +30,31 @@ package org.mobicents.servlet.restcomm.mscontrol.mgcp.messages;
 public final class CreateNetworkConnection {
 
     private final String sessionDescription;
+    private final ConnectionMode connectionMode;
+    private final boolean outbound;
+    private final boolean webrtc;
 
-    public CreateNetworkConnection(String sessionDescription) {
+    public CreateNetworkConnection(String sessionDescription, ConnectionMode mode, boolean webrtc, boolean outbound) {
         this.sessionDescription = sessionDescription;
-    }
-
-    public CreateNetworkConnection() {
-        this("");
+        this.connectionMode = mode;
+        this.outbound = outbound;
+        this.webrtc = webrtc;
     }
 
     public String getSessionDescription() {
         return sessionDescription;
+    }
+
+    public ConnectionMode getConnectionMode() {
+        return connectionMode;
+    }
+
+    public boolean isWebrtc() {
+        return webrtc;
+    }
+
+    public boolean isOutbound() {
+        return outbound;
     }
 
 }

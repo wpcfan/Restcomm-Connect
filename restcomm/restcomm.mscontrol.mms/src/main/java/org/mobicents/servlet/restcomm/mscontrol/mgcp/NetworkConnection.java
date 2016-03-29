@@ -1,7 +1,7 @@
 /*
  * TeleStax, Open Source Cloud Communications
  * Copyright 2011-2013, Telestax Inc and individual contributors
- * by the @authors tag. 
+ * by the @authors tag.
  *
  * This is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as
@@ -21,9 +21,6 @@
 
 package org.mobicents.servlet.restcomm.mscontrol.mgcp;
 
-import jain.protocol.ip.mgcp.message.parms.ConnectionDescriptor;
-import jain.protocol.ip.mgcp.message.parms.ConnectionMode;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,20 +30,30 @@ import org.mobicents.servlet.restcomm.fsm.Action;
 import org.mobicents.servlet.restcomm.fsm.FiniteStateMachine;
 import org.mobicents.servlet.restcomm.fsm.State;
 import org.mobicents.servlet.restcomm.fsm.Transition;
+import org.mobicents.servlet.restcomm.mgcp.CloseLink;
 import org.mobicents.servlet.restcomm.mgcp.ConnectionStateChanged;
 import org.mobicents.servlet.restcomm.mgcp.CreateBridgeEndpoint;
 import org.mobicents.servlet.restcomm.mgcp.CreateConnection;
+import org.mobicents.servlet.restcomm.mgcp.CreateLink;
+import org.mobicents.servlet.restcomm.mgcp.DestroyEndpoint;
+import org.mobicents.servlet.restcomm.mgcp.DestroyLink;
+import org.mobicents.servlet.restcomm.mgcp.EndpointState;
 import org.mobicents.servlet.restcomm.mgcp.EndpointStateChanged;
 import org.mobicents.servlet.restcomm.mgcp.InitializeConnection;
+import org.mobicents.servlet.restcomm.mgcp.InitializeLink;
 import org.mobicents.servlet.restcomm.mgcp.LinkStateChanged;
 import org.mobicents.servlet.restcomm.mgcp.MediaGatewayResponse;
 import org.mobicents.servlet.restcomm.mgcp.MediaSession;
 import org.mobicents.servlet.restcomm.mgcp.OpenConnection;
+import org.mobicents.servlet.restcomm.mgcp.OpenLink;
+import org.mobicents.servlet.restcomm.mgcp.UpdateConnection;
 import org.mobicents.servlet.restcomm.mscontrol.messages.CloseConnection;
 import org.mobicents.servlet.restcomm.mscontrol.messages.Join;
 import org.mobicents.servlet.restcomm.mscontrol.messages.Leave;
 import org.mobicents.servlet.restcomm.mscontrol.messages.UpdateMediaSession;
 import org.mobicents.servlet.restcomm.mscontrol.mgcp.messages.CreateNetworkConnection;
+import org.mobicents.servlet.restcomm.mscontrol.mgcp.messages.NetworkConnectionState;
+import org.mobicents.servlet.restcomm.mscontrol.mgcp.messages.NetworkConnectionStateChanged;
 import org.mobicents.servlet.restcomm.patterns.Observe;
 import org.mobicents.servlet.restcomm.patterns.Observing;
 import org.mobicents.servlet.restcomm.patterns.StopObserving;
@@ -55,6 +62,8 @@ import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import jain.protocol.ip.mgcp.message.parms.ConnectionDescriptor;
+import jain.protocol.ip.mgcp.message.parms.ConnectionMode;
 
 /**
  * Represents an MGCP-based implementation of a JSR309 NetworkConnection actor.
@@ -63,7 +72,7 @@ import akka.event.LoggingAdapter;
  * <p>
  * It is also responsible for establishing the RTP connection with remote peer via SDP negotiation.
  * </p>
- * 
+ *
  * @author Henrique Rosa (henrique.rosa@telestax.com)
  *
  */
@@ -77,6 +86,8 @@ public class NetworkConnection extends UntypedActor {
     private ActorRef endpoint;
     private ActorRef connection;
     private ActorRef link;
+    private ActorRef remoteEndoint;
+    private ConnectionMode linkMode;
 
     // Finite State Machine
     private final FiniteStateMachine fsm;
@@ -122,7 +133,7 @@ public class NetworkConnection extends UntypedActor {
         this.openingConnection = new State("opening connection", new OpeningConnection(source));
         this.pending = new State("pending", new Pending(source));
         this.updatingConnection = new State("updating connection", new UpdatingConnection(source));
-        this.closingLink = new State("closing link", new ClosingLink(source));
+        this.closingLink = new State("closing link", null, new ClosingLink(source), new ExitClosingLink(source));
         this.active = new State("active", new Active(source));
         this.acquiringLink = new State("acquiring link", new AcquiringLink(source));
         this.initializingLink = new State("initializing link", new InitializingLink(source));
@@ -221,7 +232,7 @@ public class NetworkConnection extends UntypedActor {
 
     /**
      * Broadcasts a message to all registered observers.
-     * 
+     *
      * @param message The message to be broadcast
      */
     private void broadcast(final Object message) {
@@ -271,6 +282,10 @@ public class NetworkConnection extends UntypedActor {
             this.connection = (ActorRef) message.get();
             this.connection.tell(new Observe(self), self);
             this.fsm.transition(message, initializingConnection);
+        } else if (is(acquiringLink)) {
+            this.link = (ActorRef) message.get();
+            this.link.tell(new Observe(self), self);
+            this.fsm.transition(message, initializingLink);
         }
     }
 
@@ -286,12 +301,14 @@ public class NetworkConnection extends UntypedActor {
 
             case HALF_OPEN:
                 if (is(openingConnection)) {
+                    this.localDescription = message.descriptor().toString();
                     this.fsm.transition(message, pending);
                 }
                 break;
 
             case OPEN:
                 if (is(openingConnection) || is(updatingConnection)) {
+                    this.localDescription = message.descriptor().toString();
                     this.fsm.transition(message, active);
                 }
                 break;
@@ -357,14 +374,16 @@ public class NetworkConnection extends UntypedActor {
     private void onCloseConnection(CloseConnection message, ActorRef self, ActorRef sender) throws Exception {
         if (is(acquiringBridge) || is(acquiringConnection) || is(initializingConnection)) {
             this.fsm.transition(message, closed);
+        } else if (is(pending) || is(updatingConnection) || is(closingLink) || is(acquiringLink) || is(initializingLink)
+                || is(openingLink) || is(active)) {
+            this.fsm.transition(message, closing);
         }
-        // TODO Finish here!!!
-
     }
 
-    private void onEndpointStateChanged(EndpointStateChanged message, ActorRef self, ActorRef sender) {
-        // TODO Auto-generated method stub
-
+    private void onEndpointStateChanged(EndpointStateChanged message, ActorRef self, ActorRef sender) throws Exception {
+        if (is(closing) && EndpointState.DESTROYED.equals(message.getState())) {
+            this.fsm.transition(message, closed);
+        }
     }
 
     /*
@@ -437,13 +456,11 @@ public class NetworkConnection extends UntypedActor {
 
         public Pending(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            broadcast(new NetworkConnectionStateChanged(NetworkConnectionState.PENDING));
         }
 
     }
@@ -452,13 +469,13 @@ public class NetworkConnection extends UntypedActor {
 
         public UpdatingConnection(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            final ConnectionDescriptor descriptor = new ConnectionDescriptor(remoteDescription);
+            final UpdateConnection update = new UpdateConnection(descriptor);
+            connection.tell(update, super.source);
         }
 
     }
@@ -467,13 +484,28 @@ public class NetworkConnection extends UntypedActor {
 
         public ClosingLink(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
+            link.tell(new CloseLink(), super.source);
+        }
 
+    }
+
+    private final class ExitClosingLink extends AbstractAction {
+
+        public ExitClosingLink(ActorRef source) {
+            super(source);
+        }
+
+        @Override
+        public void execute(Object message) throws Exception {
+            joined = false;
+            gateway.tell(new DestroyLink(link), super.source);
+            link = null;
+            linkMode = null;
+            remoteEndoint = null;
         }
 
     }
@@ -482,13 +514,11 @@ public class NetworkConnection extends UntypedActor {
 
         public Active(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            broadcast(new NetworkConnectionStateChanged(NetworkConnectionState.ACTIVE));
         }
 
     }
@@ -497,13 +527,11 @@ public class NetworkConnection extends UntypedActor {
 
         public AcquiringLink(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            gateway.tell(new CreateLink(session), super.source);
         }
 
     }
@@ -512,13 +540,11 @@ public class NetworkConnection extends UntypedActor {
 
         public InitializingLink(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            link.tell(new InitializeLink(endpoint, remoteEndoint), super.source);
         }
 
     }
@@ -527,13 +553,11 @@ public class NetworkConnection extends UntypedActor {
 
         public OpeningLink(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            link.tell(new OpenLink(linkMode), super.source);
         }
 
     }
@@ -542,13 +566,11 @@ public class NetworkConnection extends UntypedActor {
 
         public Closing(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            endpoint.tell(new DestroyEndpoint(), super.source);
         }
 
     }
@@ -557,13 +579,11 @@ public class NetworkConnection extends UntypedActor {
 
         public Failed(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            broadcast(new NetworkConnectionStateChanged(NetworkConnectionState.FAILED));
         }
 
     }
@@ -572,13 +592,11 @@ public class NetworkConnection extends UntypedActor {
 
         public Closed(ActorRef source) {
             super(source);
-            // TODO Auto-generated constructor stub
         }
 
         @Override
         public void execute(Object message) throws Exception {
-            // TODO Auto-generated method stub
-
+            broadcast(new NetworkConnectionStateChanged(NetworkConnectionState.CLOSED));
         }
 
     }

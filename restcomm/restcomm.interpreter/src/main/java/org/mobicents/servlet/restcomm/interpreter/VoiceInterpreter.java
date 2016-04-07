@@ -2023,65 +2023,70 @@ public final class VoiceInterpreter extends BaseVoiceInterpreter {
         @Override
         public void execute(final Object message) throws Exception {
             final ConferenceResponse<ConferenceInfo> response = (ConferenceResponse<ConferenceInfo>) message;
-            conferenceInfo = response.get();
-            conferenceState = conferenceInfo.state();
-            final Tag child = conference(verb);
+            if (!response.isFailed()) {
+                conferenceInfo = response.get();
+                conferenceState = conferenceInfo.state();
+                final Tag child = conference(verb);
 
-            // If there is room join the conference.
-            int max = 40;
-            Attribute attribute = child.attribute("maxParticipants");
-            if (attribute != null) {
-                final String value = attribute.value();
-                if (value != null && !value.isEmpty()) {
-                    try {
-                        max = Integer.parseInt(value);
-                    } catch (final NumberFormatException ignored) {
-                    }
-                }
-            }
-
-            if (conferenceInfo.participants().size() < max) {
-                // Play beep.
-                boolean beep = true;
-                attribute = child.attribute("beep");
+                // If there is room join the conference.
+                int max = 40;
+                Attribute attribute = child.attribute("maxParticipants");
                 if (attribute != null) {
                     final String value = attribute.value();
                     if (value != null && !value.isEmpty()) {
-                        beep = Boolean.parseBoolean(value);
+                        try {
+                            max = Integer.parseInt(value);
+                        } catch (final NumberFormatException ignored) {
+                        }
                     }
                 }
 
-                // Only play beep if conference is already running
-                // Do not play it while participants are listening to background music
-                if (beep && ConferenceStateChanged.State.RUNNING_MODERATOR_PRESENT.equals(conferenceInfo.state())) {
-                    String path = configuration.subset("runtime-settings").getString("prompts-uri");
-                    if (!path.endsWith("/")) {
-                        path += "/";
+                if (conferenceInfo.participants().size() < max) {
+                    // Play beep.
+                    boolean beep = true;
+                    attribute = child.attribute("beep");
+                    if (attribute != null) {
+                        final String value = attribute.value();
+                        if (value != null && !value.isEmpty()) {
+                            beep = Boolean.parseBoolean(value);
+                        }
                     }
-                    String entryAudio = configuration.subset("runtime-settings").getString("conference-entry-audio");
-                    path += entryAudio == null || entryAudio.equals("") ? "beep.wav" : entryAudio;
-                    URI uri = null;
-                    try {
-                        uri = UriUtils.resolve(new URI(path));
-                    } catch (final Exception exception) {
-                        final Notification notification = notification(ERROR_NOTIFICATION, 12400, exception.getMessage());
-                        final NotificationsDao notifications = storage.getNotificationsDao();
-                        notifications.addNotification(notification);
-                        sendMail(notification);
-                        final StopInterpreter stop = new StopInterpreter();
-                        source.tell(stop, source);
-                        return;
+
+                    // Only play beep if conference is already running
+                    // Do not play it while participants are listening to background music
+                    if (beep && ConferenceStateChanged.State.RUNNING_MODERATOR_PRESENT.equals(conferenceInfo.state())) {
+                        String path = configuration.subset("runtime-settings").getString("prompts-uri");
+                        if (!path.endsWith("/")) {
+                            path += "/";
+                        }
+                        String entryAudio = configuration.subset("runtime-settings").getString("conference-entry-audio");
+                        path += entryAudio == null || entryAudio.equals("") ? "beep.wav" : entryAudio;
+                        URI uri = null;
+                        try {
+                            uri = UriUtils.resolve(new URI(path));
+                        } catch (final Exception exception) {
+                            final Notification notification = notification(ERROR_NOTIFICATION, 12400, exception.getMessage());
+                            final NotificationsDao notifications = storage.getNotificationsDao();
+                            notifications.addNotification(notification);
+                            sendMail(notification);
+                            final StopInterpreter stop = new StopInterpreter();
+                            source.tell(stop, source);
+                            return;
+                        }
+                        final Play play = new Play(uri, 1);
+                        conference.tell(play, source);
                     }
-                    final Play play = new Play(uri, 1);
-                    conference.tell(play, source);
+                    // Join the conference.
+                    final AddParticipant request = new AddParticipant(call);
+                    conference.tell(request, source);
+                } else {
+                    // Ask the parser for the next action to take.
+                    final GetNextVerb next = GetNextVerb.instance();
+                    parser.tell(next, source);
                 }
-                // Join the conference.
-                final AddParticipant request = new AddParticipant(call);
-                conference.tell(request, source);
             } else {
-                // Ask the parser for the next action to take.
-                final GetNextVerb next = GetNextVerb.instance();
-                parser.tell(next, source);
+                logger.info("Something wrong with the Conference, will cleanup now");
+                conferenceManager.tell(new DestroyConference(conferenceInfo.name()));
             }
         }
     }

@@ -36,4 +36,14 @@ public final class ConferenceResponse<T> extends StandardResponse<T> {
     public ConferenceResponse(final Throwable cause, final String message) {
         super(cause, message);
     }
+
+    private boolean failed;
+
+    public void setFailed(Boolean failed) {
+        this.failed = failed;
+    }
+
+    public Boolean isFailed() {
+        return failed;
+    }
 }

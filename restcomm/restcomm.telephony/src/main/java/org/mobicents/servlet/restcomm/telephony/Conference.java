@@ -331,6 +331,16 @@ public final class Conference extends UntypedActor {
         } else if (is(stopped)) {
             information = new ConferenceInfo(calls, ConferenceStateChanged.State.COMPLETED, name);
         }
+        if (information == null) {
+            //At this point the conference state should be either Waiting, Running or Stopped
+            if (calls.size() == 0) {
+                fsm.transition(message, stopping);
+            }
+            ConferenceResponse confResp = new ConferenceResponse(new NullPointerException(), "Conference in bad state");
+            confResp.setFailed(true);
+            sender.tell(confResp, self());
+            return;
+        }
         sender.tell(new ConferenceResponse<ConferenceInfo>(information), self);
     }
 

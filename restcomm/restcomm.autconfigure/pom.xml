@@ -1,0 +1,79 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.telestax.servlet</groupId>
+		<artifactId>restcomm</artifactId>
+		<version>7.7.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>restcomm.autoconfigure</artifactId>
+	<packaging>war</packaging>
+	<name>restcomm.autoconfigure</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<dependencies>
+		
+	</dependencies>
+
+	<profiles>
+		<profile>
+			<id>deploy-jboss</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>1.1</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<configuration>
+									<tasks>
+										<copy verbose="true"
+											todir="${JBOSS_HOME}/standalone/deployments/${project.build.finalName}.${project.packaging}">
+											<fileset
+												dir="${project.build.directory}/${project.build.finalName}">
+												<include name="**/*" />
+											</fileset>
+										</copy>
+										<touch
+											file="${JBOSS_HOME}/standalone/deployments/${project.build.finalName}.${project.packaging}.dodeploy" />
+									</tasks>
+								</configuration>
+								<goals>
+									<goal>run</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>copy-to-jboss-lib</id>
+								<phase>package</phase>
+								<goals>
+									<goal> copy-dependencies </goal>
+								</goals>
+								<configuration>
+									<includeArtifactIds>hsqldb</includeArtifactIds>
+									<outputDirectory>${JBOSS_HOME}/bin/restcomm/</outputDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+	</profiles>
+</project>

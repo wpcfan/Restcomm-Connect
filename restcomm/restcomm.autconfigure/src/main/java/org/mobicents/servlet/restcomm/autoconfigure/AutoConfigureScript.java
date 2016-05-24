@@ -1,12 +1,15 @@
 package org.mobicents.servlet.restcomm.autoconfigure;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -22,6 +25,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.xpath.XPathExpression;
@@ -30,180 +34,204 @@ import org.xml.sax.SAXException;
 public class AutoConfigureScript {
 
     static// Properties properties = new Properties();
-    String fileRestcommConfileFile = null;
-    static String listConfigurationFiles = null;
-    static String inputFilePathConf = null;
-    boolean isAttribute = false;
-    String attributeName = null;
+
     InputStream inputStreamPropFile = null;
     XPathExpression expr;
     DocumentBuilderFactory docFactory = DocumentBuilderFactory
             .newInstance();
     DocumentBuilder docBuilder;
-    Document docStandaloneSipXml;
+    Document xmlFile;
     XPath xpath = XPathFactory.newInstance().newXPath();
     Node node = null;
     NodeList nodeList = null;
     String key = null, value = null;
+    String outputFile = null;
     String newPath = null;
-    static String getRestcommHome = null;
-    boolean thereIsMatch = false;
+
+    // static String getRestcommHome = null;
+    // boolean thereIsMatch = false;
+    static String xpathListFile = null;
 
 
     public static void main(String[] args) {
 
+        if (args.length == 1) {
+            xpathListFile = args[0];
+            UpdateConfigurationFile r = new UpdateConfigurationFile();
+            r.updateXmlConfigurationFiles();
+        } else {
 
-        Map<String, String> env = System.getenv();
-        for (String envName : env.keySet()) {
-            if (envName.startsWith("PWD")) {
-                getRestcommHome = env.get(envName)
-                        .replace("/bin/restcomm", "");
-                System.out.println("Restcomm Home : " + getRestcommHome);
-
-            }
+            System.out.println("ERROR : " + "This requires a single  argument");
+            System.out.println("USAGE: "
+                    + "java -jar ./auto-config.jar XPATH_FILENAME ");
         }
-        // set config files
-
-        fileRestcommConfileFile = getRestcommHome
-                + "/bin/restcomm/restcomm.conf";
-        listConfigurationFiles = getRestcommHome
-                + "/bin/restcomm/list-config-files.conf";
-        inputFilePathConf = getRestcommHome + "bin/restcomm/restcomm-new.conf";
-
-        AutoConfigureScript r = new AutoConfigureScript();
-        r.updateXmlFiles();
 
     }
 
-    public void updateXmlFiles() {
+    private void updateXmlConfigurationFiles() {
 
         try (BufferedReader br = new BufferedReader(new FileReader(
-                listConfigurationFiles))) {
+                xpathListFile))) {
             String sCurrentFilePath;
-            String sCurrentFilePathWithRestcommHome;
+            ArrayList<String> lists = new ArrayList<String>();
+
             while ((sCurrentFilePath = br.readLine()) != null) {
-                if (sCurrentFilePath.startsWith("/")) {
-                    sCurrentFilePathWithRestcommHome = getRestcommHome
-                            + sCurrentFilePath;
-                System.out.println("text :" + sCurrentFilePath);
-                    updateXmlConfigurationFiles(sCurrentFilePathWithRestcommHome);
-                }
+                lists.add(sCurrentFilePath);
+
             }
+
+            // getListSet();
+            for (String list : lists) {
+                if (list != null || list != "") {
+                    String[] varString = list.split("==", 2);
+                    key = varString[0]; // xpath from config file
+                    String[] varString2 = varString[1].split(" /", 2);
+                    value = varString2[0]; // xpath value to update
+                    outputFile = "/" + varString2[1]; // xml file path ex. //
+                                                      // /$RESTCOMM_HOME/.../restcomm.xml
+
+                    if (outputFile.contains(".properties")) {
+                        updatePropertiesFile(key, value, outputFile);
+                    } else if (outputFile.contains(".xml")) {
+                        getNode(key, value, outputFile);
+                    } else {
+                        System.out
+                                .println("ERROR : Your output file must be an XML or .properties file");
+                    }
+
+            }
+            }
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         } catch (IOException e) {
+            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
     }
 
-    private void updateXmlConfigurationFiles(String currentOutputFilePath) {
-        Scanner scanner = openFile(currentOutputFilePath);
-        ArrayList<String> lists = new ArrayList<String>();
-        // put content of file into an arraylist
-        while (scanner.hasNextLine()) {
-            lists.add(scanner.nextLine());
-        }
-        // getListSet();
-        for (String list : lists) {
-            if (list.startsWith("//") && list != null) {
-                String[] varString = list.split("==", 2);
-                if (varString.length == 2) {
-                    key = varString[0];
-                    value = varString[1];
-                }
-                String valueFromRestcommFile = getValueFromRestcommConfFile(value
-                        .toLowerCase());
-                // System.out.println("file :" + currentOutputFilePath);
-                // System.out.println("file :" + value);
-                if (thereIsMatch) {
-                    getNode(key, valueFromRestcommFile, currentOutputFilePath);
-                    // reset if there is a match
-                    thereIsMatch = false;
-                } else {
-
-                    getNode(key, value, currentOutputFilePath);
-                }
-
-            }
-        }
-
-    }
-
-    private String getValueFromRestcommConfFile(String confVariable) {
-        String value = null;
-        try (BufferedReader br = new BufferedReader(new FileReader(
-                fileRestcommConfileFile))) {
-            String sCurrentLine;
-            while ((sCurrentLine = br.readLine()) != null) {
-                if (sCurrentLine.toLowerCase().startsWith(confVariable)) {
-                    // remove space comments from line
-                    String[] rSpace = sCurrentLine.split(" ", 2);
-                    // remove tab
-                    String[] rTab = rSpace[0].split("\t", 2);
-                    String[] var = rTab[0].split("=", 2);
-                    value = var[1].replace("'", "").trim();
-
-                    System.out.println(var[0] + " :  : " + value);
-                    thereIsMatch = true;
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return value;
-    }
-
-    private Scanner openFile(String fileOutput) {
-        Scanner scanner = null;
+    private Document openFile(String fileOutput) {
         try {
             docBuilder = docFactory.newDocumentBuilder();
-            docStandaloneSipXml = docBuilder
-.parse(fileOutput);
-            scanner = new Scanner(new File(inputFilePathConf));
+            xmlFile = docBuilder.parse(fileOutput);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        return scanner;
+        return xmlFile;
     }
 
+    private void getNode(String newPath, String value, String xmlFileToUpdate) {
+        Document doc = openFile(xmlFileToUpdate);
 
-    private void getNode(String newPath, String valueFromRestcommFile,
-            String currentOutputFilePath) {
-        Scanner s = openFile(currentOutputFilePath);
         if (newPath != null) {
             Node updateNode;
                 try {
-                updateNode = (Node) xpath.compile(newPath).evaluate(
-                        docStandaloneSipXml,
+                updateNode = (Node) xpath.compile(newPath).evaluate(doc,
                         XPathConstants.NODE);
-
                 // System.out.println("vaueto update:" +
                 // updateNode.getNodeValue());
+                // Element element = doc.getDocumentElement();
+                System.out.println(" newPath :" + newPath);
                 if (updateNode != null) {
-                    updateNode.setTextContent(valueFromRestcommFile);
+                    System.out.println(" doc  updateNode:"
+                            + updateNode.getNodeName());
+                    System.out.println(" doc  updateNode.getNodeType:"
+                            + updateNode.getNodeType());
+                    if (updateNode.getNodeType() == 1) {
+                        System.out.println(" doc  getParentNode():"
+                                + updateNode.getParentNode().getNodeName());
+
+                    }
+                }
+
+                // if attribute doesn't exist, create it
+                if (updateNode == null) {
+                    // if missing node is attribute
+                    if (newPath.contains("/@")) {
+                        // replace path to get only the attribute
+                        // ex. //restcomm/mscontrol/media-server/@class the
+                        // regex will return class
+                        String change = newPath.replaceAll("^(.*?)/@", "");
+                        String change2 = "/@" + change;
+                        String nPath = newPath.replace(change2, "");
+                        Node updateNode2 = (Node) xpath.compile(nPath)
+                                .evaluate(doc, XPathConstants.NODE);
+                        Element elem = (Element) doc.getElementsByTagName(
+                                updateNode2.getNodeName()).item(0);
+                        // add attribute
+                        elem.setAttribute(change, value);
+                    } else {
+                        // missing node is an element so create it
+                        // TODO create missing tag element
+
+                    }
+                } else {
+                    if (updateNode.getNodeType() == 2) {
+                        String change = "/@" + updateNode.getNodeName();
+                        String nPath = newPath.replace(change, "");
+
+                        System.out.println("nPath :  " + nPath);
+
+                        Node updateNode2 = (Node) xpath.compile(nPath)
+                                .evaluate(doc, XPathConstants.NODE);
+                        Element elem = (Element) doc.getElementsByTagName(
+                                updateNode2.getNodeName()).item(0);
+
+                        elem.setAttribute(updateNode.getNodeName(), value);
+
+                    }
+                }
+
+                if (updateNode != null) {
+                    updateNode.setTextContent(value);
                 }
             // write the content into xml file
             TransformerFactory transformerFactory = TransformerFactory
                     .newInstance();
-            Transformer transformer;
-            transformer = transformerFactory.newTransformer();
-            DOMSource source = new DOMSource(docStandaloneSipXml);
-            StreamResult result = new StreamResult(new File(
-                        currentOutputFilePath));
+                Transformer transformer = transformerFactory.newTransformer();
+                DOMSource source = new DOMSource(doc);
+                StreamResult result = new StreamResult(
+                        new File(xmlFileToUpdate));
             transformer.transform(source, result);
-                s.close();
-
             } catch (XPathExpressionException | TransformerException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
     }}
 
+    private void updatePropertiesFile(String key, String value,
+            String propertiesFileToUpdate) {
 
+        OutputStream output = null;
+        try {
+            FileInputStream input = new FileInputStream(propertiesFileToUpdate);
+            Properties prop = new Properties();
+            prop.load(input);
+            input.close();
+            output = new FileOutputStream(propertiesFileToUpdate);
+            // set the properties value
+            prop.setProperty(key, value);
 
+            // save properties to project root folder
+            prop.store(output, null);
+            output.close();
 
+        } catch (IOException io) {
+            io.printStackTrace();
+        } finally {
+            if (output != null) {
+                try {
+                    output.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
 
+        }
+
+    }
 
 }
 

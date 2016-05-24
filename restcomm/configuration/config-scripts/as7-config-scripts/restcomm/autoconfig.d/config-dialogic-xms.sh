@@ -7,19 +7,25 @@ RESTCOMM_DEPLOY=$RESTCOMM_STANDALONE/deployments/restcomm.war
 
 ## Description: Elects Dialogic XMS as the active Media Server for RestComm
 activateXMS() {
-	restcomm_conf=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
-	ms_address="$1"
+	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+	XPATHLIST=../xpath-list.txt
+	jarFile=$RESTCOMM_HOME/bin/restcomm/auto-config.jar
 
-	sed -e "/<mscontrol>/ {
-		N; s|<compatibility>.*<\/compatibility>|<compatibility>$MS_COMPATIBILITY_MODE<\/compatibility>|
-		N; s|<media-server \".*\">|<media-server name=\"Dialogic XMS\" class=\"com.dialogic.dlg309\">|
-		N; s|<address>.*<\/address>|<address>$ms_address<\/address>|
-	}" $restcomm_conf > $restcomm_conf.bak
-	mv -f $restcomm_conf.bak $restcomm_conf
-	echo '...activated Dialogic XMS...'
+	echo "//restcomm/mscontrol/compatibility==$MS_COMPATIBILITY_MODE" $FILE >> $XPATHLIST
+	echo "//restcomm/mscontrol/media-server/@class==com.dialogic.dlg309" $FILE >> $XPATHLIST
+	echo "//restcomm/mscontrol/media-server/@name==Dialogic XMS" $FILE >> $XPATHLIST
+	echo "//restcomm/mscontrol/media-server/address==$MS_ADDRESS" $FILE >> $XPATHLIST
+	echo "//restcomm/mscontrol/media-server/port==5060" $FILE >> $XPATHLIST
+	echo "//restcomm/mscontrol/media-server/transport==udp" $FILE >> $XPATHLIST
+	echo "//restcomm/mscontrol/media-server/timeout==5" $FILE >> $XPATHLIST
+
+	java -jar $jarFile $XPATHLIST
+	#empty content of XPATHLIST
+	rm -rf $XPATHLIST
+
 }
 
 #MAIN
 echo "Configuring Dialogic XMS...MS_MODE: $MS_COMPATIBILITY_MODE"
-activateXMS $MS_ADDRESS
+activateXMS 
 echo '...finished configuring Dialogic XMS!'

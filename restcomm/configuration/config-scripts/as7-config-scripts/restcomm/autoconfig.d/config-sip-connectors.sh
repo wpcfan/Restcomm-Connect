@@ -2,52 +2,76 @@
 ## Description: Configures SIP connectors
 ## Author     : Henrique Rosa (henrique.rosa@telestax.com)
 ## Author     : Pavel Slegr (pavel.slegr@telestax.com)
+## Author     : Charles Roufay (pavel.slegr@telestax.com)
 
 ## Description: Configures the connectors for RestComm & configures Proxy if enabled
-## Parameters : 1.Public IP
-## Parameters : 2.Proxy IP
+
 configConnectors() {
 	FILE=$RESTCOMM_HOME/standalone/configuration/standalone-sip.xml
-	static_address="$1"
-	proxy_address="$2"
+	XPATHLIST=../xpath-list.txt
+	jarFile=$RESTCOMM_HOME/bin/restcomm/auto-config.jar
 
 	if [ "$ACTIVATE_LB" == "true" ] || [ "$ACTIVATE_LB" == "TRUE" ]; then
-		sed -e "s|path-name=\"org.mobicents.ext\" \(app-dispatcher-class=.*\)|path-name=\"org.mobicents.ha.balancing.only\" \1|" \
-		-e "s|<connector name=\"sip-udp\" .*/>|<connector name=\"sip-udp\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-udp\" use-static-address=\"true\" static-server-address=\"$LB_ADDRESS\" static-server-port=\"$LB_SIP_PORT_UDP\" use-load-balancer=\"true\"/>|" \
-	        -e "s|<connector name=\"sip-tcp\" .*/>|<connector name=\"sip-tcp\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-tcp\" use-static-address=\"true\" static-server-address=\"$LB_ADDRESS\" static-server-port=\"$LB_SIP_PORT_TCP\" use-load-balancer=\"true\"/>|" \
-	        -e "s|<connector name=\"sip-tls\" .*/>|<connector name=\"sip-tls\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-tls\" use-static-address=\"true\" static-server-address=\"$LB_ADDRESS\" static-server-port=\"$LB_SIP_PORT_TLS\" use-load-balancer=\"true\"/>|" \
-	        -e "s|<connector name=\"sip-ws\" .*/>|<connector name=\"sip-ws\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-ws\" use-static-address=\"true\" static-server-address=\"$LB_ADDRESS\" static-server-port=\"$LB_SIP_PORT_WS\" use-load-balancer=\"true\"/>|" \
-	        -e "s|<connector name=\"sip-wss\" .*/>|<connector name=\"sip-wss\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-wss\" use-static-address=\"true\" static-server-address=\"$LB_ADDRESS\" static-server-port=\"$LB_SIP_PORT_WSS\" use-load-balancer=\"true\"/>|" \
-	    $FILE > $FILE.bak
+
+
+	echo "//server/profile/subsystem['25']/connector[1][@name='sip-udp']/@static-server-address==$LB_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[2][@name='sip-tcp']/@static-server-address==$LB_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[3][@name='sip-tls']/@static-server-address==$LB_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[4][@name='sip-ws']/@static-server-address==$LB_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[5][@name='sip-wss']/@static-server-address==$LB_ADDRESS" $FILE >> $XPATHLIST
+
+	echo "//server/profile/subsystem['25']/connector[1][@name='sip-udp']/@static-server-port==$LB_SIP_PORT_UDP" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[2][@name='sip-tcp']/@static-server-port==$LB_SIP_PORT_TCP" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[3][@name='sip-tls']/@static-server-port==$LB_SIP_PORT_TLS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[4][@name='sip-ws']/@static-server-port==$LB_SIP_PORT_WS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[5][@name='sip-wss']/@static-server-port==$LB_SIP_PORT_WSS" $FILE >> $XPATHLIST
+
+
+
+	echo 'Configured SIP Connectors and Bindings'
 
 	else
 
-		if [ -n "$static_address" ]; then
-			sed -e "s|path-name=\".*\"  \(app-dispatcher-class=.*\)|path-name=\"org.mobicents.ext\"  \1|" \
-			-e "s|<connector name=\"sip-udp\" .*/>|<connector name=\"sip-udp\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-udp\" use-static-address=\"true\" static-server-address=\"$static_address\" static-server-port=\"5080\"/>|" \
-			-e "s|<connector name=\"sip-tcp\" .*/>|<connector name=\"sip-tcp\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-tcp\" use-static-address=\"true\" static-server-address=\"$static_address\" static-server-port=\"5080\"/>|" \
-			-e "s|<connector name=\"sip-tls\" .*/>|<connector name=\"sip-tls\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-tls\" use-static-address=\"true\" static-server-address=\"$static_address\" static-server-port=\"5081\"/>|" \
-			-e "s|<connector name=\"sip-ws\" .*/>|<connector name=\"sip-ws\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-ws\" use-static-address=\"true\" static-server-address=\"$static_address\" static-server-port=\"5082\"/>|" \
-			-e "s|<connector name=\"sip-wss\" .*/>|<connector name=\"sip-wss\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-wss\" use-static-address=\"true\" static-server-address=\"$static_address\" static-server-port=\"5083\"/>|" \
-		    $FILE > $FILE.bak
+		if [ -n "$STATIC_ADDRESS" ]; then
+
+	echo "//server/profile/subsystem['25']/connector[1][@name='sip-udp']/@static-server-address==$STATIC_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[2][@name='sip-tcp']/@static-server-address==$STATIC_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[3][@name='sip-tls']/@static-server-address==$STATIC_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[4][@name='sip-ws']/@static-server-address==$STATIC_ADDRESS" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[5][@name='sip-wss']/@static-server-address==$STATIC_ADDRESS" $FILE >> $XPATHLIST
+
+	echo "//server/profile/subsystem['25']/connector[1][@name='sip-udp']/@static-server-port==5080" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[2][@name='sip-tcp']/@static-server-port==5080" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[3][@name='sip-tls']/@static-server-port==5081" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[4][@name='sip-ws']/@static-server-port==5082" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[5][@name='sip-wss']/@static-server-port==5083" $FILE >> $XPATHLIST
 		else
-			sed -e "s|path-name=\".*\" \(app-dispatcher-class=.*\)|path-name=\"org.mobicents.ext\" \1|" \
-			-e "s|<connector name=\"sip-udp\" .*/>|<connector name=\"sip-udp\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-udp\" static-server-port=\"5080\"/>|" \
-			-e "s|<connector name=\"sip-tcp\" .*/>|<connector name=\"sip-tcp\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-tcp\" static-server-port=\"5080\"/>|" \
-			-e "s|<connector name=\"sip-tls\" .*/>|<connector name=\"sip-tls\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-tls\" static-server-port=\"5081\"/>|" \
-			-e "s|<connector name=\"sip-ws\" .*/>|<connector name=\"sip-ws\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-ws\" static-server-port=\"5082\"/>|" \
-			-e "s|<connector name=\"sip-wss\" .*/>|<connector name=\"sip-wss\" protocol=\"SIP/2.0\" scheme=\"sip\" socket-binding=\"sip-wss\" static-server-port=\"5083\"/>|" \
-		    $FILE > $FILE.bak
+	echo "//server/profile/subsystem['25']/connector[1][@name='sip-udp']/@static-server-address==''" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[2][@name='sip-tcp']/@static-server-address==''" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[3][@name='sip-tls']/@static-server-address==''" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[4][@name='sip-ws']/@static-server-address==''" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[5][@name='sip-wss']/@static-server-address==''" $FILE >> $XPATHLIST
+
+	echo "//server/profile/subsystem['25']/connector[1][@name='sip-udp']/@static-server-port==5080" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[2][@name='sip-tcp']/@static-server-port==5080" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[3][@name='sip-tls']/@static-server-port==5081" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[4][@name='sip-ws']/@static-server-port==5082" $FILE >> $XPATHLIST
+	echo "//server/profile/subsystem['25']/connector[5][@name='sip-wss']/@static-server-port==5083" $FILE >> $XPATHLIST
 		fi
 	fi
-	mv $FILE.bak $FILE
+
 	echo 'Configured SIP Connectors and Bindings'
 
 
 	#Enable SipServlet statistics
-	grep -q 'gather-statistics' $FILE || sed -i "s|congestion-control-interval=\".*\"|& gather-statistics=\"true\"|" $FILE
-	echo "Configured gather-statistics"
 
+	echo "//server/profile/subsystem['25']/@gather-statistics==true" $FILE >> $XPATHLIST
+
+
+
+##
+##This section adds
+##
 
 	if [[ "$TRUSTSTORE_FILE" == '' ]]; then
 		echo "TRUSTSTORE_FILE is not set";
@@ -89,6 +113,11 @@ configConnectors() {
 			fi
 		fi
 	fi
+
+	java -jar $jarFile $XPATHLIST
+	#empty content of XPATHLIST
+	rm -rf $XPATHLIST
+
 }
 
 #MAIN

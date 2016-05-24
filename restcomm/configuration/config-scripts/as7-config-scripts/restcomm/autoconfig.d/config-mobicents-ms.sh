@@ -5,29 +5,27 @@
 configUdpManager() {
 	FILE=$MMS_HOME/deploy/server-beans.xml
 	MSERVER_EXTERNAL_ADDRESS="$MEDIASERVER_EXTERNAL_ADDRESS"
+	jarFile=$RESTCOMM_HOME/bin/restcomm/auto-config.jar
+	XPATHLIST=../xpath-list.txt
+	jarFile=$RESTCOMM_HOME/bin/restcomm/auto-config.jar
 
 	if [ "$MSERVER_EXTERNAL_ADDRESS" = "$1" ]; then
    		MSERVER_EXTERNAL_ADDRESS="\<null\/\>"
 	fi
 
-	sed -e "s|<property name=\"bindAddress\">.*<\/property>|<property name=\"bindAddress\">$1<\/property>|" \
-	    -e "s|<property name=\"localBindAddress\">.*<\/property>|<property name=\"localBindAddress\">$1<\/property>|" \
-			-e "s|<property name=\"externalAddress\">.*</property>|<property name=\"externalAddress\">$MSERVER_EXTERNAL_ADDRESS</property>|" \
-	    -e "s|<property name=\"localNetwork\">.*<\/property>|<property name=\"localNetwork\">$2<\/property>|" \
-	    -e "s|<property name=\"localSubnet\">.*<\/property>|<property name=\"localSubnet\">$3<\/property>|" \
-	    -e 's|<property name="useSbc">.*</property>|<property name="useSbc">true</property>|' \
-	    -e 's|<property name="dtmfDetectorDbi">.*</property>|<property name="dtmfDetectorDbi">0</property>|' \
-	    -e "s|<property name=\"lowestPort\">.*</property>|<property name=\"lowestPort\">$MEDIASERVER_LOWEST_PORT</property>|" \
-	    -e "s|<property name=\"highestPort\">.*</property>|<property name=\"highestPort\">$MEDIASERVER_HIGHEST_PORT</property>|" \
-	    $FILE > $FILE.bak
+	echo "//deployment/bean[4]/property[1]==$PRIVATE_IP" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[2]==$PRIVATE_IP" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[3]==$STATIC_ADDRESS" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[4]==$NETWORK" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[5]==$SUBNET_MASK" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[6]==$MEDIASERVER_USE_SBC" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[7]==$MEDIASERVER_RTP_TIMEOUT" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[8]==$MEDIASERVER_LOWEST_PORT" $FILE >> $XPATHLIST
+	echo "//deployment/bean[4]/property[9]==$MEDIASERVER_HIGHEST_PORT" $FILE >> $XPATHLIST
 
-#	grep -q -e "<property name=\"lowestPort\">.*</property>" $FILE.bak || sed -i "/rtpTimeout/ a\
-#    <property name=\"lowestPort\">$MEDIASERVER_LOWEST_PORT</property>" $FILE.bak
-
-#    grep -q -e "<property name=\"highestPort\">.*</property>" $FILE.bak || sed -i "/rtpTimeout/ a\
-#    <property name=\"highestPort\">$MEDIASERVER_HIGHEST_PORT</property>" $FILE.bak
-
-	mv $FILE.bak $FILE
+	java -jar $jarFile $XPATHLIST
+	#empty content of XPATHLIST
+	rm -rf $XPATHLIST
 	echo 'Configured UDP Manager'
 }
 
@@ -58,6 +56,8 @@ configLogDirectory() {
 	FILE=$MMS_HOME/conf/log4j.xml
 	DIRECTORY=$MMS_HOME/log
 
+#	java -jar $jarFile "//log4j:configuration/appender[2]/param[1]['@value=']/@value==$DIRECTORY/server.log" $FILE
+
 	sed -e "/<param name=\"File\" value=\".*server.log\" \/>/ s|value=\".*server.log\"|value=\"$DIRECTORY/server.log\"|" \
 	    $FILE > $FILE.bak
 	mv $FILE.bak $FILE
@@ -65,12 +65,7 @@ configLogDirectory() {
 }
 
 ## MAIN
-if [[ -z "$MEDIASERVER_LOWEST_PORT" ]]; then
-	MEDIASERVER_LOWEST_PORT="34534"
-fi
-if [[ -z "$MEDIASERVER_HIGHEST_PORT" ]]; then
-	MEDIASERVER_HIGHEST_PORT="65535"
-fi
+
 
 if [[ "$TRUSTSTORE_FILE" == '' ]]; then
 	echo "TRUSTSTORE_FILE is not set";

@@ -12,7 +12,11 @@
 ##
 ##
 ##
+
+
+
 configSipStack() {
+
 	lb_sipstack_file="$RESTCOMM_HOME/standalone/configuration/mss-sip-stack.properties"
 
         if [ "$ACTIVATE_LB" == "true" ] || [ "$ACTIVATE_LB" == "TRUE" ]; then
@@ -31,19 +35,46 @@ configSipStack() {
 
 	fi
 	mv $lb_sipstack_file.bak $lb_sipstack_file
+
+
+#
+# This has been commented out because of issues: http://stackoverflow.com/questions/5198428/saving-to-properties-file-escapes
+# We shall be using sed until issue can be resolved
+#
+#	FILE="$RESTCOMM_HOME/standalone/configuration/mss-sip-stack.properties"
+#	XPATHLIST=../xpath-list.txt
+#	jarFile=$RESTCOMM_HOME/bin/restcomm/auto-config.jar
+#
+#        if [ "$ACTIVATE_LB" == "true" ] || [ "$ACTIVATE_LB" == "TRUE" ]; then
+#		echo "org.mobicents.ha.javax.sip.BALANCERS==$LB_ADDRESS/:$LB_INTERNAL_PORT" $FILE >> $XPATHLIST
+#		echo "org.mobicents.ha.javax.sip.REACHABLE_CHECK==false" $FILE >> $XPATHLIST
+#	else
+#		echo "org.mobicents.ha.javax.sip.BALANCERS== " $FILE >> $XPATHLIST
+#		echo "org.mobicents.ha.javax.sip.REACHABLE_CHECK== " $FILE >> $XPATHLIST
+#
+#	fi
+#
+#	java -jar $jarFile $XPATHLIST
+#	#empty content of XPATHLIST
+#	#echo "" > $XPATHLIST
+#	echo 'Load Balancer has been activated and mss-sip-stack.properties file updated'
 }
 
 
 configStandalone() {
-	lb_standalone_file="$RESTCOMM_HOME/standalone/configuration/standalone-sip.xml"
-	
+	FILE="$RESTCOMM_HOME/standalone/configuration/standalone-sip.xml"
+	XPATHLIST=../xpath-list.txt
+	jarFile=$RESTCOMM_HOME/bin/restcomm/auto-config.jar
+
 	path_name='org.mobicents.ext'
 	if [[ "$RUN_MODE" == *"-lb" ]]; then
 		path_name="org.mobicents.ha.balancing.only"
 	fi
-	
-	sed -e "s|subsystem xmlns=\"urn:org.mobicents:sip-servlets-as7:1.0\" application-router=\"configuration/dars/mobicents-dar.properties\" stack-properties=\"configuration/mss-sip-stack.properties\" path-name=\".*\" app-dispatcher-class=\"org.mobicents.servlet.sip.core.SipApplicationDispatcherImpl\" concurrency-control-mode=\"SipApplicationSession\" congestion-control-interval=\"-1\"|subsystem xmlns=\"urn:org.mobicents:sip-servlets-as7:1.0\" application-router=\"configuration/dars/mobicents-dar.properties\" stack-properties=\"configuration/mss-sip-stack.properties\" path-name=\"$path_name\" app-dispatcher-class=\"org.mobicents.servlet.sip.core.SipApplicationDispatcherImpl\" concurrency-control-mode=\"SipApplicationSession\" congestion-control-interval=\"-1\"|" $lb_standalone_file > $lb_standalone_file.bak
-	mv -f $lb_standalone_file.bak lb_standalone_file
+	echo "//server/profile/subsystem['25']/@path-name==$path_name" $FILE >> $XPATHLIST
+
+	java -jar $jarFile $XPATHLIST
+	#empty content of XPATHLIST
+	rm -rf $XPATHLIST
 }
 
 

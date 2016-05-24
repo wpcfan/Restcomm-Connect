@@ -18,6 +18,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.Query;
 import javax.management.ReflectionException;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
 import org.mobicents.servlet.restcomm.HttpConnector;
@@ -172,5 +173,14 @@ public final class UriUtils {
             getHttpConnectorList();
         }
         return httpConnectorList;
+    }
+
+    public static URI getHttpRequestUrl(HttpServletRequest request) {
+        try {
+            final URI url = new URI(String.valueOf(request.getRequestURL()));
+            return url;
+        } catch (URISyntaxException e) {
+            return null;
+        }
     }
 }

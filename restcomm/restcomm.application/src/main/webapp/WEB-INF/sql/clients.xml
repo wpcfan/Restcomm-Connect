@@ -16,7 +16,7 @@
   </select>
   
   <select id="getClientByLogin" parameterType="string" resultType="hashmap">
-    SELECT * FROM "restcomm_clients" WHERE "login"=#{login};
+    SELECT * FROM "restcomm_clients" AS "rc" LEFT JOIN "restcomm_accounts" AS "ra" ON "rc.account_sid" = "ra.sid" WHERE "rc.login"=#{login} AND "ra.organization_sid"=#{organization_sid};
   </select>
   
   <select id="getClients" parameterType="string" resultType="hashmap">

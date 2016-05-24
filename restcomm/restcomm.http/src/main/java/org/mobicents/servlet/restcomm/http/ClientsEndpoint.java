@@ -193,8 +193,9 @@ public abstract class ClientsEndpoint extends SecuredEndpoint {
     }
 
     public Response putClient(final String accountSid, final MultivaluedMap<String, String> data, final MediaType responseType) {
+        Account operatedAccount = accountsDao.getAccount(accountSid);
         try {
-            secure(accountsDao.getAccount(accountSid), "RestComm:Create:Clients");
+            secure(operatedAccount, "RestComm:Create:Clients");
            // secureLevelControl(accountsDao, accountSid, null);
         } catch (final AuthorizationException exception) {
             return status(UNAUTHORIZED).build();
@@ -206,13 +207,13 @@ public abstract class ClientsEndpoint extends SecuredEndpoint {
         }
 
         // Issue 109: https://bitbucket.org/telestax/telscale-restcomm/issue/109
-        Client client = dao.getClient(data.getFirst("Login"));
+        Client client = dao.getClient(data.getFirst("Login"), operatedAccount.getOrganizationSid());
         if (client == null) {
             client = createFrom(new Sid(accountSid), data);
             dao.addClient(client);
-        } else if (!client.getAccountSid().toString().equals(accountSid)) {
+        } else {
             return status(CONFLICT)
-                    .entity("A client with the same name was already created by another account. Please, choose a different name and try again.")
+                    .entity("A client with the same name was already created in the Organization. Please, choose a different name and try again.")
                     .build();
         }
 

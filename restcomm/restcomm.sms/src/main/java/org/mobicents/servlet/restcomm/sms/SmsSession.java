@@ -23,12 +23,16 @@ import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+
 import com.google.common.collect.ImmutableMap;
+
 import org.apache.commons.configuration.Configuration;
 import org.mobicents.servlet.restcomm.dao.ClientsDao;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
+import org.mobicents.servlet.restcomm.dao.OrganizationsDao;
 import org.mobicents.servlet.restcomm.dao.RegistrationsDao;
 import org.mobicents.servlet.restcomm.entities.Client;
+import org.mobicents.servlet.restcomm.entities.Organization;
 import org.mobicents.servlet.restcomm.entities.Registration;
 import org.mobicents.servlet.restcomm.patterns.Observe;
 import org.mobicents.servlet.restcomm.patterns.Observing;
@@ -38,6 +42,7 @@ import org.mobicents.servlet.restcomm.sms.smpp.SmppInboundMessageEntity;
 import org.mobicents.servlet.restcomm.sms.smpp.SmppMessageHandler;
 import org.mobicents.servlet.restcomm.sms.smpp.SmppOutboundMessageEntity;
 import org.mobicents.servlet.restcomm.telephony.TextMessage;
+import org.mobicents.servlet.restcomm.util.OrganizationUtils;
 
 import javax.servlet.ServletContext;
 import javax.servlet.sip.SipApplicationSession;
@@ -46,6 +51,7 @@ import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 import javax.servlet.sip.SipSession;
 import javax.servlet.sip.SipURI;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -226,8 +232,12 @@ public final class SmsSession extends UntypedActor {
         final String body = last.body();
 
         monitoringService.tell(new TextMessage(from, to, TextMessage.SmsState.OUTBOUND), self());
+        final String toHost = ((SipURI) last.getOrigRequest().getTo().getURI()).getHost();
+        final String toNamespace = OrganizationUtils.getOrganizationNamespace(toHost);
+        final OrganizationsDao organizations = storage.getOrganizationsDao();
+        final Organization toOrganization = organizations.getOrganization(toNamespace);
         final ClientsDao clients = storage.getClientsDao();
-        final Client toClient = clients.getClient(to);
+        final Client toClient = clients.getClient(to, toOrganization.getSid());
         Registration toClientRegistration = null;
         if (toClient != null) {
             final RegistrationsDao registrations = storage.getRegistrationsDao();

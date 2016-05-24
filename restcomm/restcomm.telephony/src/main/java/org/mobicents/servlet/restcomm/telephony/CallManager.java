@@ -61,12 +61,14 @@ import org.mobicents.servlet.restcomm.dao.ClientsDao;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
 import org.mobicents.servlet.restcomm.dao.IncomingPhoneNumbersDao;
 import org.mobicents.servlet.restcomm.dao.NotificationsDao;
+import org.mobicents.servlet.restcomm.dao.OrganizationsDao;
 import org.mobicents.servlet.restcomm.dao.RegistrationsDao;
 import org.mobicents.servlet.restcomm.entities.Account;
 import org.mobicents.servlet.restcomm.entities.Application;
 import org.mobicents.servlet.restcomm.entities.Client;
 import org.mobicents.servlet.restcomm.entities.IncomingPhoneNumber;
 import org.mobicents.servlet.restcomm.entities.Notification;
+import org.mobicents.servlet.restcomm.entities.Organization;
 import org.mobicents.servlet.restcomm.entities.Registration;
 import org.mobicents.servlet.restcomm.entities.Sid;
 import org.mobicents.servlet.restcomm.interpreter.StartInterpreter;
@@ -76,6 +78,7 @@ import org.mobicents.servlet.restcomm.mscontrol.MediaServerControllerFactory;
 import org.mobicents.servlet.restcomm.patterns.StopObserving;
 import org.mobicents.servlet.restcomm.telephony.util.B2BUAHelper;
 import org.mobicents.servlet.restcomm.telephony.util.CallControlHelper;
+import org.mobicents.servlet.restcomm.util.OrganizationUtils;
 import org.mobicents.servlet.restcomm.util.UriUtils;
 
 import com.google.i18n.phonenumbers.NumberParseException;
@@ -193,7 +196,7 @@ public final class CallManager extends UntypedActor {
         final Configuration outboundProxyConfig = runtime.subset("outbound-proxy");
         SipURI outboundIntf = outboundInterface("udp");
         if (outboundIntf != null) {
-            myHostIp = ((SipURI) outboundIntf).getHost().toString();
+            myHostIp = outboundIntf.getHost().toString();
         } else {
             String errMsg = "SipURI outboundIntf is null";
             sendNotification(errMsg, 14001, "error", false);
@@ -293,8 +296,11 @@ public final class CallManager extends UntypedActor {
         // Try to find an application defined for the client.
         final SipURI fromUri = (SipURI) request.getFrom().getURI();
         String fromUser = fromUri.getUser();
+        final String fromNamespace = OrganizationUtils.getOrganizationNamespace(fromUri.getHost());
+        final OrganizationsDao organizations = storage.getOrganizationsDao();
+        final Organization fromOrganization = organizations.getOrganization(fromNamespace == null ? "default" : fromNamespace);
         final ClientsDao clients = storage.getClientsDao();
-        final Client client = clients.getClient(fromUser);
+        final Client client = clients.getClient(fromUser, fromOrganization.getSid());
         if (client != null) {
             // Make sure we force clients to authenticate.
             if (!authenticateUsers // https://github.com/Mobicents/RestComm/issues/29 Allow disabling of SIP authentication
@@ -331,7 +337,9 @@ public final class CallManager extends UntypedActor {
         }
 
         if (client != null) { // make sure the caller is a registered client and not some external SIP agent that we have little control over
-            Client toClient = clients.getClient(toUser);
+            final String toNamespace = OrganizationUtils.getOrganizationNamespace(toHost);
+            final Organization toOrganization = organizations.getOrganization(toNamespace == null ? "default" : toNamespace);
+            Client toClient = clients.getClient(toUser, toOrganization.getSid());
             if (toClient != null) { // looks like its a p2p attempt between two valid registered clients, lets redirect to the b2bua
                 if(logger.isInfoEnabled()) {
                     logger.info("Client is not null: " + client.getLogin() + " will try to proxy to client: "+ toClient);
@@ -385,7 +393,7 @@ public final class CallManager extends UntypedActor {
                         try {
                             if (useLocalAddressAtFromHeader) {
                                 if (outboudproxyUserAtFromHeader) {
-                                    from = (SipURI) sipFactory.createSipURI(proxyUsername,
+                                    from = sipFactory.createSipURI(proxyUsername,
                                             mediaExternalIp + ":" + outboundIntf.getPort());
                                 } else {
                                     from = sipFactory.createSipURI(((SipURI) request.getFrom().getURI()).getUser(),
@@ -395,7 +403,7 @@ public final class CallManager extends UntypedActor {
                                 if (outboudproxyUserAtFromHeader) {
                                     // https://telestax.atlassian.net/browse/RESTCOMM-633. Use the outbound proxy username as
                                     // the userpart of the sip uri for the From header
-                                    from = (SipURI) sipFactory.createSipURI(proxyUsername, proxyURI);
+                                    from = sipFactory.createSipURI(proxyUsername, proxyURI);
                                 } else {
                                     from = sipFactory.createSipURI(((SipURI) request.getFrom().getURI()).getUser(), proxyURI);
                                 }
@@ -802,7 +810,7 @@ public final class CallManager extends UntypedActor {
 
         // Get first call leg observers
         final Timeout expires = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-        Future<Object> future = (Future<Object>) ask(call, new GetCallObservers(), expires);
+        Future<Object> future = ask(call, new GetCallObservers(), expires);
         CallResponse<List<ActorRef>> response = (CallResponse<List<ActorRef>>) Await.result(future,
                 Duration.create(10, TimeUnit.SECONDS));
         List<ActorRef> callObservers = response.get();
@@ -811,8 +819,8 @@ public final class CallManager extends UntypedActor {
         ActorRef existingInterpreter = callObservers.iterator().next();
 
         // Get the outbound leg of this call
-        future = (Future<Object>) ask(existingInterpreter, new GetRelatedCall(call), expires);
-        Object answer = (Object) Await.result(future, Duration.create(10, TimeUnit.SECONDS));
+        future = ask(existingInterpreter, new GetRelatedCall(call), expires);
+        Object answer = Await.result(future, Duration.create(10, TimeUnit.SECONDS));
 
         ActorRef relatedCall = null;
         if (answer instanceof ActorRef) {
@@ -1020,12 +1028,12 @@ public final class CallManager extends UntypedActor {
                     if (outboudproxyUserAtFromHeader) {
                         // https://telestax.atlassian.net/browse/RESTCOMM-633. Use the outbound proxy username as the userpart
                         // of the sip uri for the From header
-                        from = (SipURI) sipFactory.createSipURI(proxyUsername, uri);
+                        from = sipFactory.createSipURI(proxyUsername, uri);
                     } else {
                         from = sipFactory.createSipURI(request.from(), uri);
                     }
                 }
-                if (((SipURI) from).getUser() == null || ((SipURI) from).getUser() == "") {
+                if (from.getUser() == null || from.getUser() == "") {
                     if (uri != null) {
                         from = sipFactory.createSipURI(request.from(), uri);
                     } else {

@@ -45,11 +45,13 @@ import org.mobicents.servlet.restcomm.dao.ClientsDao;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
 import org.mobicents.servlet.restcomm.dao.IncomingPhoneNumbersDao;
 import org.mobicents.servlet.restcomm.dao.NotificationsDao;
+import org.mobicents.servlet.restcomm.dao.OrganizationsDao;
 import org.mobicents.servlet.restcomm.dao.SmsMessagesDao;
 import org.mobicents.servlet.restcomm.entities.Application;
 import org.mobicents.servlet.restcomm.entities.Client;
 import org.mobicents.servlet.restcomm.entities.IncomingPhoneNumber;
 import org.mobicents.servlet.restcomm.entities.Notification;
+import org.mobicents.servlet.restcomm.entities.Organization;
 import org.mobicents.servlet.restcomm.entities.Sid;
 import org.mobicents.servlet.restcomm.entities.SmsMessage;
 import org.mobicents.servlet.restcomm.entities.SmsMessage.Direction;
@@ -59,6 +61,7 @@ import org.mobicents.servlet.restcomm.interpreter.StartInterpreter;
 import org.mobicents.servlet.restcomm.telephony.TextMessage;
 import org.mobicents.servlet.restcomm.telephony.util.B2BUAHelper;
 import org.mobicents.servlet.restcomm.telephony.util.CallControlHelper;
+import org.mobicents.servlet.restcomm.util.OrganizationUtils;
 import org.mobicents.servlet.restcomm.util.UriUtils;
 
 import akka.actor.ActorRef;
@@ -132,8 +135,11 @@ public final class SmsService extends UntypedActor {
 
         final SipURI fromURI = (SipURI) request.getFrom().getURI();
         final String fromUser = fromURI.getUser();
+        final String fromNamespace = OrganizationUtils.getOrganizationNamespace(fromURI.getHost());
+        final OrganizationsDao organizations = storage.getOrganizationsDao();
+        final Organization fromOrganization = organizations.getOrganization(fromNamespace == null ? "default" : fromNamespace);
         final ClientsDao clients = storage.getClientsDao();
-        final Client client = clients.getClient(fromUser);
+        final Client client = clients.getClient(fromUser, fromOrganization.getSid());
         final AccountsDao accounts = storage.getAccountsDao();
         final ApplicationsDao applications = storage.getApplicationsDao();
 
@@ -172,7 +178,10 @@ public final class SmsService extends UntypedActor {
             // try to see if the request is destined to another registered client
             // if (client != null) { // make sure the caller is a registered client and not some external SIP agent that we
             // have little control over
-            Client toClient = clients.getClient(toUser);
+            final String host = ((SipURI) request.getTo().getURI()).getHost();
+            final String toNamespace = OrganizationUtils.getOrganizationNamespace(host);
+            final Organization toOrganization = organizations.getOrganization(toNamespace == null ? "default" : toNamespace);
+            Client toClient = clients.getClient(toUser, toOrganization.getSid());
             if (toClient != null) { // looks like its a p2p attempt between two valid registered clients, lets redirect
                 // to the b2bua
                 if (B2BUAHelper.redirectToB2BUA(request, client, toClient, storage, sipFactory, patchForNatB2BUASessions)) {

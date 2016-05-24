@@ -27,10 +27,10 @@ import java.util.Map;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
-
 import org.joda.time.DateTime;
 
 import static org.mobicents.servlet.restcomm.dao.DaoUtils.*;
+
 import org.mobicents.servlet.restcomm.dao.ClientsDao;
 import org.mobicents.servlet.restcomm.entities.Client;
 import org.mobicents.servlet.restcomm.entities.Sid;
@@ -66,8 +66,21 @@ public final class MybatisClientsDao implements ClientsDao {
     }
 
     @Override
-    public Client getClient(final String login) {
-        return getClient(namespace + "getClientByLogin", login);
+    public Client getClient(final String login, Sid organizationSid) {
+        final SqlSession session = sessions.openSession();
+        try {
+            final Map<String, Object> map = new HashMap<String, Object>();
+            map.put("login", login);
+            map.put("organization_sid", String.valueOf(organizationSid.toString()));
+            final Map<String, Object> result = session.selectOne(namespace + "getClientByLogin", map);
+            if (result != null) {
+                return toClient(result);
+            } else {
+                return null;
+            }
+        } finally {
+            session.close();
+        }
     }
 
     private Client getClient(final String selector, final String parameter) {

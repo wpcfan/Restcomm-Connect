@@ -24,18 +24,24 @@ import akka.actor.ReceiveTimeout;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+
 import com.telestax.servlet.MonitoringService;
+
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.DateTime;
 import org.mobicents.servlet.restcomm.configuration.RestcommConfiguration;
 import org.mobicents.servlet.restcomm.dao.ClientsDao;
 import org.mobicents.servlet.restcomm.dao.DaoManager;
+import org.mobicents.servlet.restcomm.dao.OrganizationsDao;
 import org.mobicents.servlet.restcomm.dao.RegistrationsDao;
 import org.mobicents.servlet.restcomm.entities.Client;
+import org.mobicents.servlet.restcomm.entities.Organization;
 import org.mobicents.servlet.restcomm.entities.Registration;
 import org.mobicents.servlet.restcomm.entities.Sid;
 import org.mobicents.servlet.restcomm.telephony.UserRegistration;
 import org.mobicents.servlet.restcomm.util.DigestAuthentication;
+import org.mobicents.servlet.restcomm.util.OrganizationUtils;
+
 import scala.concurrent.duration.Duration;
 
 import javax.servlet.ServletContext;
@@ -49,6 +55,7 @@ import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 import javax.servlet.sip.SipSession;
 import javax.servlet.sip.SipURI;
+
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -233,8 +240,11 @@ public final class UserAgentManager extends UntypedActor {
         final String cnonce = map.get("cnonce");
         final String qop = map.get("qop");
         final String response = map.get("response");
+        final String namespace = OrganizationUtils.getOrganizationNamespace(realm);
+        final OrganizationsDao organizations = storage.getOrganizationsDao();
+        final Organization organization = organizations.getOrganization(namespace == null ? "default" : namespace);
         final ClientsDao clients = storage.getClientsDao();
-        final Client client = clients.getClient(user);
+        final Client client = clients.getClient(user, organization.getSid());
         if (client != null && Client.ENABLED == client.getStatus()) {
             final String password = client.getPassword();
             final String result = DigestAuthentication.response(algorithm, user, realm, password, nonce, nc, cnonce, method,

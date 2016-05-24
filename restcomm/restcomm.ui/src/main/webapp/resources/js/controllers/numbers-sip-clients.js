@@ -128,8 +128,12 @@ var ClientDetailsCtrl = function ($scope, $stateParams, $location, $dialog, $mod
         Notifications.success('RestComm Client "' + client.login + '" created successfully!');
         $modalInstance.close();
       },
-      function() { // error
-        // TODO: Show alert
+      function(response) { // error
+        if(response.status == 409) {
+          Notifications.error('The name "' + client.login + '" is already in use by another Client of the Organization. Please, choose a different name and try again.');
+        } else {
+          Notifications.error('Failed to create client "' + client.login + '".');
+        }
       }
     );
   };

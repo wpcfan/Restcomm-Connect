@@ -147,7 +147,7 @@ public final class UserAgentManager extends UntypedActor {
         final RegistrationsDao registrations = storage.getRegistrationsDao();
         final List<Registration> results = registrations.getRegistrations();
         for (final Registration result : results) {
-            final String to = result.getLocation();
+            final String to = result.getAddressOfRecord();
             ping(to);
         }
     }
@@ -292,7 +292,9 @@ public final class UserAgentManager extends UntypedActor {
                 response.getApplicationSession().invalidate();
             }
         final RegistrationsDao registrations = storage.getRegistrationsDao();
-        Registration registration = registrations.getRegistration(((SipURI)response.getTo().getURI()).getUser());
+        final String toUser = ((SipURI) response.getTo().getURI()).getUser();
+        final String toHost = ((SipURI) response.getTo().getURI()).getHost();
+        Registration registration = registrations.getRegistrationByAoR(toUser, toHost);
         //Registration here shouldn't be null. Update it
         registration = registration.updated();
         registrations.updateRegistration(registration);

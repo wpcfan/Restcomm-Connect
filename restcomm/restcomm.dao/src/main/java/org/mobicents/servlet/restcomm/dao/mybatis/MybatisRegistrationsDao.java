@@ -70,6 +70,7 @@ public final class MybatisRegistrationsDao implements RegistrationsDao {
     }
 
     @Override
+    @Deprecated
     public Registration getRegistration(String user) {
         final SqlSession session = sessions.openSession();
         try {
@@ -108,6 +109,31 @@ public final class MybatisRegistrationsDao implements RegistrationsDao {
             map.put("user_name", user);
             map.put("instanceid", instanceId);
             final List<Map<String, Object>> results = session.selectList(namespace + "getRegistrationByInstanceId", map);
+            final List<Registration> records = new ArrayList<Registration>();
+            if (results != null && !results.isEmpty()) {
+                for (final Map<String, Object> result : results) {
+                    records.add(toPresenceRecord(result));
+                }
+                if (records.isEmpty()) {
+                    return null;
+                } else {
+                    Collections.sort(records);
+                    return records.get(0);
+                }
+            } else {
+                return null;
+            }
+        } finally {
+            session.close();
+        }
+    }
+
+    @Override
+    public Registration getRegistrationByAoR(String name, String host) {
+        String addressOfRecord = "sip:" + name + "@" + host;
+        final SqlSession session = sessions.openSession();
+        try {
+            final List<Map<String, Object>> results = session.selectList(namespace + "getRegistrationByAoR", addressOfRecord);
             final List<Registration> records = new ArrayList<Registration>();
             if (results != null && !results.isEmpty()) {
                 for (final Map<String, Object> result : results) {

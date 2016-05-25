@@ -241,7 +241,7 @@ public final class SmsSession extends UntypedActor {
         Registration toClientRegistration = null;
         if (toClient != null) {
             final RegistrationsDao registrations = storage.getRegistrationsDao();
-            toClientRegistration = registrations.getRegistration(toClient.getLogin());
+            toClientRegistration = registrations.getRegistrationByAoR(toClient.getLogin(), toHost);
         }
 
 //        // Try to find an application defined for the phone number.

@@ -95,16 +95,19 @@
          }
 
          String user = ((SipURI) request.getTo().getURI()).getUser();
+         final String toHost = ((SipURI) request.getTo().getURI()).getHost();
+         final String fromHost = ((SipURI) request.getFrom().getURI()).getHost();
 
          final RegistrationsDao registrations = daoManager.getRegistrationsDao();
-         final Registration registration = registrations.getRegistration(user);
+         final Registration registration = registrations.getRegistrationByAoR(user, toHost);
          if (registration != null) {
              final String location = registration.getLocation();
              SipURI to;
              SipURI from;
              try {
                  to = (SipURI) sipFactory.createURI(location);
-                 from = (SipURI) sipFactory.createURI((registrations.getRegistration(client.getLogin())).getLocation());
+                 from = (SipURI) sipFactory.createURI((registrations.getRegistrationByAoR(client.getLogin(), fromHost))
+                        .getLocation());
                  final SipSession incomingSession = request.getSession();
                  // create and send the outgoing invite and do the session linking
                  incomingSession.setAttribute(B2BUA_LAST_REQUEST, request);
@@ -469,7 +472,8 @@
              String offer = null;
              if (response.getContentType().equalsIgnoreCase("application/sdp") && patchForNat) {
                  // Issue 306: https://telestax.atlassian.net/browse/RESTCOMM-306
-                 Registration registration = daoManager.getRegistrationsDao().getRegistration(callRecord.getTo());
+                 String toHost = ((SipURI)linkedRequest.getTo().getURI()).getHost();
+                 Registration registration = daoManager.getRegistrationsDao().getRegistrationByAoR(callRecord.getTo(), toHost);
                  String externalIp;
                  if (registration != null) {
                      externalIp = registration.getLocation().split(":")[1].split("@")[1];

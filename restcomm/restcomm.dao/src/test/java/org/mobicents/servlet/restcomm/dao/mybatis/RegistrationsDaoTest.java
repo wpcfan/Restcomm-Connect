@@ -71,7 +71,7 @@ public final class RegistrationsDaoTest {
         registrations.addRegistration(registration);
         assertTrue(registrations.hasRegistration(registration));
         // Read the registration from the data store.
-        Registration result = registrations.getRegistration(username);
+        Registration result = registrations.getRegistrationByAoR("tom", "company.com");
         // Validate the results.
         assertTrue(registrations.getRegistrations().size() >= 1);
         assertTrue(result.getSid().equals(registration.getSid()));
@@ -89,7 +89,7 @@ public final class RegistrationsDaoTest {
         registration = registration.setTimeToLive(3600);
         registrations.updateRegistration(registration);
         // Read the updated registration from the data store.
-        result = registrations.getRegistration(username);
+        result = registrations.getRegistrationByAoR("tom", "company.com");
         // Validate the results.
         assertTrue(result.getSid().equals(registration.getSid()));
         assertTrue(result.getDateCreated().equals(registration.getDateCreated()));
@@ -121,7 +121,7 @@ public final class RegistrationsDaoTest {
         assertFalse(registrations.hasRegistration(registration));
         registrations.addRegistration(registration);
         assertTrue(registrations.getRegistrations().size() > 0);
-        assertNotNull(registrations.getRegistration(username));
+        assertNotNull(registrations.getRegistrationByAoR("tom", "company.com"));
         // Expected to fail if UA is null
         assertFalse(registrations.hasRegistration(registration));
     }
@@ -139,7 +139,7 @@ public final class RegistrationsDaoTest {
         assertFalse(registrations.hasRegistration(registration));
         registrations.addRegistration(registration);
         assertTrue(registrations.getRegistrations().size() > 0);
-        assertNotNull(registrations.getRegistration(username));
+        assertNotNull(registrations.getRegistrationByAoR("tom", "company.com"));
         // Expected to fail if Display Name is null
         assertFalse(registrations.hasRegistration(registration));
     }

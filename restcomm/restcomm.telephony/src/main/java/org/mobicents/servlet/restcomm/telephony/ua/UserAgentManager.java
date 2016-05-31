@@ -148,7 +148,8 @@ public final class UserAgentManager extends UntypedActor {
         final List<Registration> results = registrations.getRegistrations();
         for (final Registration result : results) {
             final String to = result.getAddressOfRecord();
-            ping(to);
+            final String location = result.getLocation();
+            ping(to, location);
         }
     }
 
@@ -202,7 +203,7 @@ public final class UserAgentManager extends UntypedActor {
             logger.debug("Error response for the OPTIONS to: "+sipServletMessage.getFrom().toString()+" will remove registration");
         }
         final RegistrationsDao regDao = storage.getRegistrationsDao();
-        List<Registration> registrations = regDao.getRegistrations(user);
+        List<Registration> registrations = regDao.getRegistrationsByAoR(user, host);
         if (registrations != null) {
             Iterator<Registration> iter = registrations.iterator();
             SipURI regLocation = null;
@@ -255,7 +256,7 @@ public final class UserAgentManager extends UntypedActor {
         }
     }
 
-    private void ping(final String to) throws ServletException {
+    private void ping(final String to, final String location) throws ServletException {
         final SipApplicationSession application = factory.createApplicationSession();
         String toTransport = ((SipURI) factory.createURI(to)).getTransportParam();
         if (toTransport == null) {
@@ -271,7 +272,8 @@ public final class UserAgentManager extends UntypedActor {
         final String from = buffer.toString();
         final SipServletRequest ping = factory.createRequest(application, "OPTIONS", from, to);
         final SipURI uri = (SipURI) factory.createURI(to);
-        ping.pushRoute(uri);
+        final SipURI routeUri = (SipURI) factory.createURI(location);
+        ping.pushRoute(routeUri);
         ping.setRequestURI(uri);
         final SipSession session = ping.getSession();
         session.setHandler("UserAgentManager");

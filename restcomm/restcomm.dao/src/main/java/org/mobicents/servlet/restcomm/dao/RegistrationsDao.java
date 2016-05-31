@@ -29,13 +29,17 @@ import org.mobicents.servlet.restcomm.entities.Registration;
 public interface RegistrationsDao {
     void addRegistration(Registration registration);
 
+    @Deprecated
     Registration getRegistration(String user);
 
     Registration getRegistrationByInstanceId(String User, String instanceId);
 
     Registration getRegistrationByAoR(String user, String host);
 
+    @Deprecated
     List<Registration> getRegistrations(String user);
+
+    List<Registration> getRegistrationsByAoR(String user, String host);
 
     List<Registration> getRegistrations();
 

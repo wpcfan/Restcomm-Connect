@@ -129,8 +129,8 @@ public final class MybatisRegistrationsDao implements RegistrationsDao {
     }
 
     @Override
-    public Registration getRegistrationByAoR(String name, String host) {
-        String addressOfRecord = "sip:" + name + "@" + host;
+    public Registration getRegistrationByAoR(String user, String host) {
+        String addressOfRecord = "sip:" + user + "@" + host;
         final SqlSession session = sessions.openSession();
         try {
             final List<Map<String, Object>> results = session.selectList(namespace + "getRegistrationByAoR", addressOfRecord);
@@ -154,6 +154,7 @@ public final class MybatisRegistrationsDao implements RegistrationsDao {
     }
 
     @Override
+    @Deprecated
     public List<Registration> getRegistrations(String user) {
         final SqlSession session = sessions.openSession();
         try {
@@ -161,6 +162,31 @@ public final class MybatisRegistrationsDao implements RegistrationsDao {
             // we get all registrations and sort them by latest updated date so that we target the device where the user last
             // updated the registration
             final List<Map<String, Object>> results = session.selectList(namespace + "getRegistration", user);
+            final List<Registration> records = new ArrayList<Registration>();
+            if (results != null && !results.isEmpty()) {
+                for (final Map<String, Object> result : results) {
+                    records.add(toPresenceRecord(result));
+                }
+                if (records.isEmpty()) {
+                    return null;
+                } else {
+                    Collections.sort(records);
+                    return records;
+                }
+            } else {
+                return null;
+            }
+        } finally {
+            session.close();
+        }
+    }
+
+    @Override
+    public List<Registration> getRegistrationsByAoR(String user, String host) {
+        String addressOfRecord = "sip:" + host + "@" + host;
+        final SqlSession session = sessions.openSession();
+        try {
+            final List<Map<String, Object>> results = session.selectList(namespace + "getRegistrationByAoR", addressOfRecord);
             final List<Registration> records = new ArrayList<Registration>();
             if (results != null && !results.isEmpty()) {
                 for (final Map<String, Object> result : results) {

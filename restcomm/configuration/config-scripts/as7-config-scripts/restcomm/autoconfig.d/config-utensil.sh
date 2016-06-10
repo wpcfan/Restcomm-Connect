@@ -51,7 +51,30 @@ setINITPassword(){
     fi
 }
 
+configSMTP(){
+    FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+    if [[ -z $SMTP_USER || -z $SMTP_PASSWORD || -z $SMTP_HOST ]]; then
+            echo 'one or more variables are undefined'
+            echo  'Not possible to continue with SMTP configuration'
+
+    else
+            echo "SMTP_USER $SMTP_USER SMTP_PASSWORD $SMTP_PASSWORD SMTP_HOST $SMTP_HOST"
+            sed -i "/<smtp-notify>/ {
+            N; s|<host>.*</host>|<host>`echo $SMTP_HOST`</host>|
+            N; s|<user>.*</user>|<user>`echo $SMTP_USER`</user>|
+            N; s|<password>.*</password>|<password>`echo $SMTP_PASSWORD`</password>|
+            }" $FILE
+
+            sed -i "/<smtp-service>/ {
+            N; s|<host>.*</host>|<host>`echo $SMTP_HOST`</host>|
+            N; s|<user>.*</user>|<user>`echo $SMTP_USER`</user>|
+            N; s|<password>.*</password>|<password>`echo $SMTP_PASSWORD`</password>|
+            }" $FILE
+    fi
+}
+
 
 # MAIN
 configS3Bucket
 setINITPassword
+configSMTP

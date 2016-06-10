@@ -170,10 +170,27 @@ configDaoManager() {
 	echo 'Configured MySQL Dao Manager for MySQL'
 }
 
+initPassword(){
+    SQL_FILE=$RESTCOMM_DEPLOY/WEB-INF/scripts/mariadb/init.sql
+    if [ -n "$INIT_PASSWORD" ]; then
+        # chnange admin password
+        if grep -q "uninitialized" $SQL_FILE; then
+            PASSWORD_ENCRYPTED=`echo -n "${INIT_PASSWORD}" | md5sum |cut -d " " -f1`
+            #echo "Update password to ${INIT_PASSWORD}($PASSWORD_ENCRYPTED)"
+            sed -i "s/uninitialized/active/g" $SQL_FILE
+            sed -i "s/77f8c12cc7b8f8423e5c38b035249166/$PASSWORD_ENCRYPTED/g" $SQL_FILE
+            sed -i 's/Date("2012-04-24")/now()/' $SQL_FILE
+            sed -i 's/Date("2012-04-24")/now()/' $SQL_FILE
+            # end
+         else
+            echo "Adminitrator Password Already changed"
+         fi
+    fi
+}
 populateDB(){
 
     #Change script to defined schema
-    sed -i "s|restcomm;|${MYSQL_SCHEMA};|" $BASEDIR/standalone/deployments/restcomm.war/WEB-INF/scripts/mariadb/init.sql
+    sed -i "s|restcomm;|${MYSQL_SCHEMA};|" $RESTCOMM_DEPLOY/WEB-INF/scripts/mariadb/init.sql
 
     if mysql -u $2 -p$3 -h $1 -e "SELECT * FROM \`$4\`.restcomm_clients;" $database; then
             # Update config settings
@@ -182,7 +199,7 @@ populateDB(){
         echo "Database not populated, importing schema and updating config file"
         echo "Create RestComm Database"
         echo "Configuring RestComm Database MySQL"
-        FILE=/opt/Restcomm-JBoss-AS7/standalone/deployments/restcomm.war/WEB-INF/scripts/mariadb/init.sql
+        FILE=$RESTCOMM_DEPLOY/WEB-INF/scripts/mariadb/init.sql
         mysql -u $2 -p$3 -h $1 < $FILE
         mysql -u $2 -p$3 -h $1 --execute='show databases;'
         mysql -u $2 -p$3 -h $1 --execute='show tables;' $4;
@@ -192,13 +209,19 @@ populateDB(){
 
 # MAIN
 if [  "${ENABLE_MYSQL^^}" = "TRUE"  ]; then
-	echo "Configuring MySQL datasource... $MYSQL_HOST $MYSQL_SCHEMA $MYSQL_USER $MYSQL_SNDHOST"
-	creteMysqlDataSource
-	enableDataSource
-	configMybatis
-	configDaoManager
-	configureMySQLDataSource $MYSQL_HOST $MYSQL_USER $MYSQL_PASSWORD $MYSQL_SCHEMA $MYSQL_SNDHOST
-	populateDB $MYSQL_HOST $MYSQL_USER $MYSQL_PASSWORD $MYSQL_SCHEMA
+    if [[ -z $MYSQL_HOST || -z $MYSQL_USER || -z $MYSQL_PASSWORD || -z $MYSQL_SCHEMA ]]; then
+        echo 'one or more variables are undefined'
+        echo  'Not possible to continue with Mysql configuration'
+        exit 1
+    else
+	    echo "Configuring MySQL datasource... $MYSQL_HOST $MYSQL_SCHEMA $MYSQL_USER $MYSQL_SNDHOST"
+	    creteMysqlDataSource
+	    enableDataSource
+	    configMybatis
+	    configDaoManager
+	    configureMySQLDataSource $MYSQL_HOST $MYSQL_USER $MYSQL_PASSWORD $MYSQL_SCHEMA $MYSQL_SNDHOST
+	    initPassword
+	    populateDB $MYSQL_HOST $MYSQL_USER $MYSQL_PASSWORD $MYSQL_SCHEMA
 	echo 'Finished configuring MySQL datasource!'
-
+    fi
 fi

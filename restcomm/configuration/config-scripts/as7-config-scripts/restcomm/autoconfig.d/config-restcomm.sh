@@ -357,6 +357,8 @@ configMediaServerManager() {
 ## 		4.systemType
 ## 		5.peerIP
 ## 		6.peerPort
+##      7.sourceMap
+##      8.destinationMap
 
 configSMPPAccount() {
 	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
@@ -366,9 +368,13 @@ configSMPPAccount() {
 	systemType="$4"
 	peerIP="$5"
 	peerPort="$6"
+	sourceMap="$7"
+	destinationMap="$8"
 
 
 	sed -i "s|<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\" activateSmppConnection =\".*\">|<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\" activateSmppConnection =\"$activate\">|g" $FILE
+	#Add sourceMap && destinationMap
+	sed -i "s|<connection activateAddressMapping=\"false\" sourceAddressMap=\"\" destinationAddressMap=\"\" tonNpiValue=\"1\">|<connection activateAddressMapping=\"false\" sourceAddressMap=\"${sourceMap}\" destinationAddressMap=\"${destinationMap}\" tonNpiValue=\"1\">|" $FILE
 
 	if [ "$activate" == "true" ] || [ "$activate" == "TRUE" ]; then
 		sed -e	"/<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\"/{
@@ -386,6 +392,7 @@ configSMPPAccount() {
 		}" $FILE > $FILE.bak
 
 		mv $FILE.bak $FILE
+
 		echo 'Configured SMPP Account Details'
 
 	else
@@ -405,10 +412,9 @@ configSMPPAccount() {
 
 		mv $FILE.bak $FILE
 		echo 'Configured SMPP Account Details'
-
-
 	fi
 }
+
 configMediaServerMSaddress() {
 	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
 
@@ -441,7 +447,6 @@ configRestCommURIs() {
 	fi
 }
 
-
 updateRecordingsPath() {
 	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
 
@@ -472,7 +477,7 @@ configSpeechRecognizer "$ISPEECH_KEY"
 configSpeechSynthesizers
 configTelestaxProxy "$ACTIVE_PROXY" "$TP_LOGIN" "$TP_PASSWORD" "$INSTANCE_ID" "$PROXY_IP" "$SITE_ID"
 configMediaServerManager "$ACTIVE_PROXY" "$BIND_ADDRESS" "$MEDIASERVER_EXTERNAL_ADDRESS"
-configSMPPAccount "$SMPP_ACTIVATE" "$SMPP_SYSTEM_ID" "$SMPP_PASSWORD" "$SMPP_SYSTEM_TYPE" "$SMPP_PEER_IP" "$SMPP_PEER_PORT"
+configSMPPAccount "$SMPP_ACTIVATE" "$SMPP_SYSTEM_ID" "$SMPP_PASSWORD" "$SMPP_SYSTEM_TYPE" "$SMPP_PEER_IP" "$SMPP_PEER_PORT" "$SMPP_SOURCE_MAP" $"SMPP_DEST_MAP"
 configMediaServerMSaddress "$BIND_ADDRESS"
 configRestCommURIs
 updateRecordingsPath

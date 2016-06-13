@@ -15,7 +15,7 @@ configure_RC_logs(){
 
     sed -i "/ <console-handler name=\"CONSOLE\">/ {
     N; s|<level name=\".*\"/>|<level name=\"${LOG_LEVEL}\"/>|
-	}" $BASEDIR/standalone/configuration/standalone-sip.xml
+	}" $RESTCOMM_HOME/standalone/configuration/standalone-sip.xml
 }
 
 configure_RMS_log(){
@@ -29,11 +29,20 @@ config_on_thefly(){
     sed -i "s|jboss-cli.sh --connect controller=.*|jboss-cli.sh --connect controller=$PUBLIC_IP|" $FILE
 }
 
+config_AKKA_logs(){
+    FILE=$RESTCOMM_HOME/standalone/deployments/restcomm.war/WEB-INF/classes/application.conf
+    echo "Update AKKA log level to ${AKKA_LOG_LEVEL}"
+    sed -i "s|loglevel = \".*\"|loglevel = \"${AKKA_LOG_LEVEL}\"|" $FILE
+    sed -i "s|stdout-loglevel = \".*\"|stdout-loglevel = \"${AKKA_LOG_LEVEL}\"|" $FILE
+}
+
+
 #MAIN
 if [ -n "$LOG_LEVEL" ]; then
     configure_RMS_log
     configure_RC_logs
     config_on_thefly
+    config_AKKA_logs
     for i in $( set -o posix ; set | grep ^LOG_LEVEL_COMPONENT_ | sort -rn ); do
         component=$(echo ${i} | cut -d = -f2)
         level=$(echo ${i} | cut -d = -f3)

@@ -461,6 +461,13 @@ otherRestCommConf(){
     FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
     sed -e "s|<play-music-for-conference>.*</play-music-for-conference>|<play-music-for-conference>${PLAY_WAIT_MUSIC}<\/play-music-for-conference>|" $FILE > $FILE.bak
 	mv $FILE.bak $FILE
+
+	if [ -n "$HSQL_DIR" ]; then
+  		echo "HSQL_DIR $HSQL_DIR"
+  		mkdir -p $HSQL_PERSIST
+  		sed -i "s|<data-files>.*</data-files>|<data-files>${HSQL_DIR}</data-files>|"  $FILE
+  		cp $$RESTCOMM_DEPLOY/WEB-INF/data/hsql/* $HSQL_DIR
+	fi
 }
 
 

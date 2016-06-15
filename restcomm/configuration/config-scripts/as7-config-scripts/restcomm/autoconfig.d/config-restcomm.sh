@@ -9,6 +9,7 @@
 RESTCOMM_BIN=$RESTCOMM_HOME/bin
 RESTCOMM_DARS=$RESTCOMM_HOME/standalone/configuration/dars
 RESTCOMM_DEPLOY=$RESTCOMM_HOME/standalone/deployments/restcomm.war
+RVD_DEPLOY=$RESTCOMM_HOME/standalone/deployments/restcomm-rvd.war
 
 ## FUNCTIONS
 
@@ -464,10 +465,39 @@ otherRestCommConf(){
 
 	if [ -n "$HSQL_DIR" ]; then
   		echo "HSQL_DIR $HSQL_DIR"
-  		mkdir -p $HSQL_PERSIST
+  		mkdir -p $HSQL_DIR
   		sed -i "s|<data-files>.*</data-files>|<data-files>${HSQL_DIR}</data-files>|"  $FILE
-  		cp $$RESTCOMM_DEPLOY/WEB-INF/data/hsql/* $HSQL_DIR
+  		cp $RESTCOMM_DEPLOY/WEB-INF/data/hsql/* $HSQL_DIR
 	fi
+}
+
+confRVD(){
+	if [ -n "$RVD_LOCATION" ]; then
+  		echo "RVD_LOCATION $RVD_LOCATION"
+  		mkdir -p `echo $RVD_LOCATION`
+  		sed -i "s|<workspaceLocation>.*</workspaceLocation>|<workspaceLocation>'${RVD_LOCATION}'</workspaceLocation>|" $RVD_DEPLOY/WEB-INF/rvd.xml
+
+  		COPYFLAG=$RVD_LOCATION/.demos_initialized
+  		if [ -f "$COPYFLAG" ]; then
+   			#Do nothing, we already copied the demo file to the new workspace
+    		echo "RVD demo application are already copied"
+  		else
+    		echo "Will copy RVD demo applications to the new workspace $RVD_LOCATION"
+    		cp -ar $RVD_DEPLOY/workspace/* $RVD_LOCATION
+    		touch $COPYFLAG
+  		fi
+	fi
+
+	if [ -n "$RVD_PORT" ]; then
+        echo "RVD_PORT $RVD_PORI"
+        if [  "${DISABLE_HTTP^^}" = "TRUE"  ]; then
+			SCHEME='https'
+		else
+			SCHEME='http'
+		fi
+        #If used means that port mapping at docker (e.g: -p 445:443) is not the default (-p 443:443)
+        sed -i "s|<restcommBaseUrl>.*</restcommBaseUrl>|<restcommBaseUrl>${SCHEME}://${PUBLIC_IP}:${RVD_PORT}/</restcommBaseUrl>|" $RVD_DEPLOY/WEB-INF/rvd.xml
+    fi
 }
 
 
@@ -489,4 +519,5 @@ configMediaServerMSaddress "$BIND_ADDRESS"
 configRestCommURIs
 updateRecordingsPath
 otherRestCommConf
+confRVD
 echo 'Configured RestComm!'

@@ -24,7 +24,7 @@ import akka.actor.ReceiveTimeout;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import com.telestax.servlet.MonitoringService;
+import com.telestax.servlet.monitoring.MonitoringService;
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.DateTime;
 import org.mobicents.servlet.restcomm.configuration.RestcommConfiguration;

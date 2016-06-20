@@ -72,7 +72,7 @@ import akka.event.LoggingAdapter;
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.telestax.servlet.MonitoringService;
+import com.telestax.servlet.monitoring.MonitoringService;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)

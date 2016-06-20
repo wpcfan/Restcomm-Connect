@@ -53,7 +53,7 @@ import org.mobicents.servlet.restcomm.telephony.MonitoringServiceResponse;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.telestax.servlet.MonitoringService;
+import com.telestax.servlet.monitoring.MonitoringService;
 import com.thoughtworks.xstream.XStream;
 
 import akka.actor.ActorRef;

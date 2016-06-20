@@ -20,14 +20,18 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mobicents.servlet.restcomm.mgcp.MediaSession;
-import org.mobicents.servlet.restcomm.mgcp.MockMediaGateway;
+import org.mobicents.servlet.restcomm.mgcp.monitoring.MgcpMonitoringService;
 
+import javax.sip.address.SipURI;
 import javax.sip.message.Response;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.Map;
+import java.util.Collection;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.cafesip.sipunit.SipAssert.assertLastOperationSuccess;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -172,12 +176,80 @@ public class TestMgcpOperations {
 
         bobCall.listenForDisconnect();
         assertTrue(bobCall.waitForDisconnect(10000));
-
-        Map<MediaSession, ActorRef> endpoints = MockMediaGateway.getEndpointsMap();
-        assertNotNull(endpoints);
-        assertTrue(endpoints.size() == 0);
     }
 
+    @Test
+    public synchronized void testDialApplicationInvalidURL() throws InterruptedException, ParseException {
+
+        // Create outgoing call with first phone
+        final SipCall georgeCall = georgePhone.createSipCall();
+        georgeCall.initiateOutgoingCall(georgeContact, notFoundDialNumber, null, body, "application", "sdp", null, null);
+        assertLastOperationSuccess(georgeCall);
+
+
+        // wait for 180 Ringing
+        assertTrue(georgeCall.waitOutgoingCallResponse(5 * 1000));
+        final int response = georgeCall.getLastReceivedResponse().getStatusCode();
+        assertTrue(response == Response.NOT_FOUND);
+    }
+
+    private String dialUriRcml = "<Response><Dial timeLimit=\"100000\" timeout=\"1000000\"><Uri>sip:alice@127.0.0.1:5091</Uri></Dial><Hangup/></Response>";
+    @Test
+    public synchronized void testDialUriAliceHangup() throws InterruptedException, ParseException {
+        stubFor(get(urlPathEqualTo("/1111"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/xml")
+                        .withBody(dialUriRcml)));
+
+        Credential c = new Credential("127.0.0.1", "bob", "1234");
+        bobPhone.addUpdateCredential(c);
+
+        // Phone2 register as alice
+        SipURI uri = aliceSipStack.getAddressFactory().createSipURI(null, "127.0.0.1:5080");
+        assertTrue(alicePhone.register(uri, "alice", "1234", aliceContact, 3600, 3600));
+
+        // Prepare second phone to receive call
+        SipCall aliceCall = alicePhone.createSipCall();
+        aliceCall.listenForIncomingCall();
+
+        // Create outgoing call with first phone
+        final SipCall bobCall = bobPhone.createSipCall();
+        bobCall.initiateOutgoingCall(bobContact, dialRestcomm, null, body, "application", "sdp", null, null);
+        assertLastOperationSuccess(bobCall);
+        assertTrue(bobCall.waitForAuthorisation(5000));
+        assertTrue(bobCall.waitOutgoingCallResponse(5 * 1000));
+        final int response = bobCall.getLastReceivedResponse().getStatusCode();
+        assertTrue(response == Response.TRYING || response == Response.RINGING);
+
+        if (response == Response.TRYING) {
+            assertTrue(bobCall.waitOutgoingCallResponse(5 * 1000));
+            assertEquals(Response.RINGING, bobCall.getLastReceivedResponse().getStatusCode());
+        }
+
+
+        assertTrue(bobCall.waitOutgoingCallResponse(5 * 1000));
+        assertEquals(Response.OK, bobCall.getLastReceivedResponse().getStatusCode());
+
+        bobCall.sendInviteOkAck();
+        assertTrue(!(bobCall.getLastReceivedResponse().getStatusCode() >= 400));
+
+        assertTrue(aliceCall.waitForIncomingCall(30 * 1000));
+        assertTrue(aliceCall.sendIncomingCallResponse(Response.RINGING, "Ringing-Alice", 3600));
+        String receivedBody = new String(aliceCall.getLastReceivedRequest().getRawContent());
+        assertTrue(aliceCall.sendIncomingCallResponse(Response.OK, "OK-Alice", 3600, receivedBody, "application", "sdp", null,
+                null));
+        assertTrue(aliceCall.waitForAck(50 * 1000));
+
+        Thread.sleep(3000);
+
+        // hangup.
+        aliceCall.disconnect();
+
+        bobCall.listenForDisconnect();
+        assertTrue(bobCall.waitForDisconnect(30 * 1000));
+        assertTrue(bobCall.respondToDisconnect());
+    }
 
     @Deployment(name = "TestDialVerbPartOne", managed = true, testable = false)
     public static WebArchive createWebArchiveNoGw() {
@@ -189,10 +261,10 @@ public class TestMgcpOperations {
         archive = archive.merge(restcommArchive);
         archive.delete("/WEB-INF/sip.xml");
         archive.delete("/WEB-INF/conf/restcomm.xml");
-//        archive.delete("/WEB-INF/data/hsql/restcomm.script");
+        archive.delete("/WEB-INF/data/hsql/restcomm.script");
         archive.addAsWebInfResource("sip.xml");
         archive.addAsWebInfResource("restcomm.xml", "conf/restcomm.xml");
-//        archive.addAsWebInfResource("restcomm.script_dialTest_new", "data/hsql/restcomm.script");
+        archive.addAsWebInfResource("restcomm.script_mgcpoperations", "data/hsql/restcomm.script");
         logger.info("Packaged Test App");
         return archive;
     }

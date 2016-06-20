@@ -17,7 +17,7 @@ import com.cloudhopper.smpp.type.SmppInvalidArgumentException;
 import com.cloudhopper.smpp.type.SmppTimeoutException;
 import com.cloudhopper.smpp.type.UnrecoverablePduException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.telestax.servlet.MonitoringService;
+import com.telestax.servlet.monitoring.MonitoringService;
 import org.apache.commons.configuration.Configuration;
 import org.mobicents.servlet.restcomm.dao.AccountsDao;
 import org.mobicents.servlet.restcomm.dao.ApplicationsDao;

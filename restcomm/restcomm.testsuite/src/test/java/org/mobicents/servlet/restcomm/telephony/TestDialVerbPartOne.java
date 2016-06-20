@@ -1,5 +1,6 @@
 package org.mobicents.servlet.restcomm.telephony;
 
+import akka.actor.ActorRef;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -22,11 +23,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mobicents.servlet.restcomm.http.RestcommCallsTool;
+import org.mobicents.servlet.restcomm.mgcp.monitoring.MgcpMonitoringService;
 
 import javax.sip.address.SipURI;
 import javax.sip.message.Response;
 import java.net.URL;
 import java.text.ParseException;
+import java.util.Collection;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -277,7 +280,6 @@ public class TestDialVerbPartOne {
                 assertTrue(fotiniCall.waitForDisconnect(30 * 1000));
             }
         }).start();
-
     }
 
     @Test

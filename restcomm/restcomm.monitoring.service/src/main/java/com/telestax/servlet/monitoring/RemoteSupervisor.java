@@ -18,7 +18,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.telestax.servlet;
+package com.telestax.servlet.monitoring;
 
 /**
  * Implementation of this interface represent remote endpoints which want to get notified for traffic events

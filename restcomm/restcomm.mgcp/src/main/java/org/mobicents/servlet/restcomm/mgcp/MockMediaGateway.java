@@ -44,11 +44,12 @@ import jain.protocol.ip.mgcp.message.parms.ReturnCode;
 import jain.protocol.ip.mgcp.pkg.MgcpEvent;
 import org.mobicents.protocols.mgcp.jain.pkg.AUMgcpEvent;
 import org.mobicents.protocols.mgcp.jain.pkg.AUPackage;
+import org.mobicents.servlet.restcomm.mgcp.monitoring.ConnectionCreated;
+import org.mobicents.servlet.restcomm.mgcp.monitoring.EndpointCreated;
+import org.mobicents.servlet.restcomm.mgcp.monitoring.LinkCreated;
 import org.mobicents.servlet.restcomm.util.RevolvingCounter;
 
 import java.net.InetAddress;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -58,6 +59,8 @@ public final class MockMediaGateway extends UntypedActor {
     private static final String sdp = "v=0\n" + "o=- 1362546170756 1 IN IP4 192.168.1.100\n" + "s=Mobicents Media Server\n"
             + "c=IN IP4 192.168.1.100\n" + "t=0 0\n" + "m=audio 63044 RTP/AVP 97 8 0 101\n" + "a=rtpmap:97 l16/8000\n"
             + "a=rtpmap:8 pcma/8000\n" + "a=rtpmap:0 pcmu/8000\n" + "a=rtpmap:101 telephone-event/8000\n" + "a=fmtp:101 0-15\n";
+
+    private ActorRef mgcpMonitoringService;
 
     // MediaGateway connection information.
     private String name;
@@ -81,27 +84,8 @@ public final class MockMediaGateway extends UntypedActor {
     private RevolvingCounter connectionIdPool;
     private RevolvingCounter endpointIdPool;
 
-    private static Map<MediaSession, ActorRef> endpoints;
-    private static Map<MediaSession, ActorRef> links;
-    private static Map<MediaSession, ActorRef> connections;
-
     public MockMediaGateway() {
         super();
-        endpoints = new ConcurrentHashMap<MediaSession, ActorRef>();
-        links = new ConcurrentHashMap<MediaSession, ActorRef>();
-        connections = new ConcurrentHashMap<MediaSession, ActorRef>();
-    }
-
-    public static Map<MediaSession, ActorRef> getEndpointsMap() {
-        return endpoints;
-    }
-
-    public static Map<MediaSession, ActorRef> getConnections() {
-        return connections;
-    }
-
-    public static Map<MediaSession, ActorRef> getLinks() {
-        return links;
     }
 
     private ActorRef getConnection(final Object message) {
@@ -116,7 +100,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new Connection(gateway, session, agent, timeout);
             }
         }));
-        connections.put(session, connection);
+        mgcpMonitoringService.tell(new ConnectionCreated(connection),self());
         return connection;
     }
 
@@ -132,7 +116,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new BridgeEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        endpoints.put(session, bridgeEndpoint);
+        mgcpMonitoringService.tell(new EndpointCreated(bridgeEndpoint), self());
         return bridgeEndpoint;
     }
 
@@ -148,7 +132,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new ConferenceEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        endpoints.put(session, conferenceEndpoint);
+        mgcpMonitoringService.tell(new EndpointCreated(conferenceEndpoint), self());
         return conferenceEndpoint;
     }
 
@@ -168,7 +152,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new IvrEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        endpoints.put(session, ivrEndpoint);
+        mgcpMonitoringService.tell(new EndpointCreated(ivrEndpoint), self());
         return ivrEndpoint;
     }
 
@@ -184,7 +168,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new Link(gateway, session, agent, timeout);
             }
         }));
-        links.put(session, link);
+        mgcpMonitoringService.tell(new LinkCreated(link), self());
         return link;
     }
 
@@ -200,7 +184,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new PacketRelayEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        endpoints.put(session, packetRelayEndpoint);
+        mgcpMonitoringService.tell(new EndpointCreated(packetRelayEndpoint), self());
         return packetRelayEndpoint;
     }
 
@@ -235,6 +219,7 @@ public final class MockMediaGateway extends UntypedActor {
         useNat = request.useNat();
         externalIp = request.getExternalIp();
         timeout = request.getTimeout();
+        mgcpMonitoringService = request.getMgcpMonitoringService();
         agent = new NotifiedEntity("restcomm", localIp.getHostAddress(), localPort);
         domain = new StringBuilder().append(remoteIp.getHostAddress()).append(":").append(remotePort).toString();
         connectionIdPool = new RevolvingCounter(1, Integer.MAX_VALUE);
@@ -276,15 +261,15 @@ public final class MockMediaGateway extends UntypedActor {
             sender.tell(new MediaGatewayResponse<ActorRef>(endpoint), self);
         } else if (DestroyConnection.class.equals(klass)) {
             final DestroyConnection request = (DestroyConnection) message;
-            connections.values().remove(request.connection());
+            mgcpMonitoringService.tell(message, self());
             context.stop(request.connection());
         } else if (DestroyLink.class.equals(klass)) {
             final DestroyLink request = (DestroyLink) message;
-            links.values().remove(request.link());
+            mgcpMonitoringService.tell(message, self());
             context.stop(request.link());
         } else if (DestroyEndpoint.class.equals(klass)) {
             final DestroyEndpoint request = (DestroyEndpoint) message;
-            endpoints.values().remove(request.endpoint());
+            mgcpMonitoringService.tell(message, self());
             context.stop(request.endpoint());
         } else if (message instanceof JainMgcpCommandEvent) {
             send(message, sender);

@@ -28,6 +28,7 @@ import org.mobicents.servlet.restcomm.entities.shiro.ShiroResources;
 import org.mobicents.servlet.restcomm.identity.IdentityContext;
 import org.mobicents.servlet.restcomm.loader.ObjectFactory;
 import org.mobicents.servlet.restcomm.loader.ObjectInstantiationException;
+import com.telestax.servlet.monitoring.com.telestax.servlet.monitoring.mgcp.MgcpMonitoringService;
 import org.mobicents.servlet.restcomm.mgcp.PowerOnMediaGateway;
 import org.mobicents.servlet.restcomm.mscontrol.MediaServerControllerFactory;
 import org.mobicents.servlet.restcomm.mscontrol.MediaServerInfo;
@@ -44,7 +45,7 @@ import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.actor.UntypedActorFactory;
 
-import com.telestax.servlet.MonitoringService;
+import com.telestax.servlet.monitoring.MonitoringService;
 
 /**
  *
@@ -68,7 +69,7 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
         system.awaitTermination();
     }
 
-    private MediaServerControllerFactory mediaServerControllerFactory(final Configuration configuration, ClassLoader loader)
+    private MediaServerControllerFactory mediaServerControllerFactory(final Configuration configuration, ClassLoader loader, ActorRef mgcpMonitoring)
             throws ServletException {
         Configuration settings ;
         String compatibility = configuration.subset("mscontrol").getString("compatibility", "mms");
@@ -79,7 +80,7 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
                 ActorRef gateway;
                 try {
                     settings = configuration.subset("media-server-manager");
-                    gateway = gateway(settings, loader);
+                    gateway = gateway(settings, loader, mgcpMonitoring);
                     factory = new MmsControllerFactory(this.system, gateway);
                 } catch (UnknownHostException e) {
                     throw new ServletException(e);
@@ -190,7 +191,7 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
         return result;
     }
 
-    private ActorRef gateway(final Configuration settings, final ClassLoader loader) throws UnknownHostException {
+    private ActorRef gateway(final Configuration settings, final ClassLoader loader, ActorRef mgcpMonitoring) throws UnknownHostException {
         final ActorRef gateway = system.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
@@ -219,6 +220,7 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
         }
         final String timeout = settings.getString("mgcp-server.response-timeout");
         builder.setTimeout(Long.parseLong(timeout));
+        builder.setMgcpMonitoringService(mgcpMonitoring);
         final PowerOnMediaGateway powerOn = builder.build();
         gateway.tell(powerOn, null);
         return gateway;
@@ -251,7 +253,18 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
             }
         }));
         return monitoring;
+    }
 
+    private ActorRef mgcpMonitoringService(final Configuration configuration, final ClassLoader loader) {
+        final ActorRef mgcpMonitoring = system.actorOf(new Props(new UntypedActorFactory() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public UntypedActor create() throws Exception {
+                return (UntypedActor) new ObjectFactory(loader).getObjectInstance(MgcpMonitoringService.class.getName());
+            }
+        }));
+        return mgcpMonitoring;
     }
 
     private String uri(final ServletContext context) {
@@ -319,6 +332,17 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
                 logger.error("Monitoring Service is null");
             }
 
+            //Initialize Monitoring Service
+            ActorRef mgcpMonitoring = mgcpMonitoringService(xml, loader);
+            if (mgcpMonitoring != null) {
+                context.setAttribute(MgcpMonitoringService.class.getName(), mgcpMonitoring);
+                if(logger.isInfoEnabled()) {
+                    logger.info("Mgcp Monitoring Service created and stored in the context");
+                }
+            } else {
+                logger.error("Mgcp Monitoring Service is null");
+            }
+
             //Initialize Extensions
             Configuration extensionConfiguration = null;
             try {
@@ -332,7 +356,7 @@ public final class Bootstrapper extends SipServlet implements SipServletListener
             // Create the media server controller factory
             MediaServerControllerFactory mscontrollerFactory = null;
             try {
-                mscontrollerFactory = mediaServerControllerFactory(xml, loader);
+                mscontrollerFactory = mediaServerControllerFactory(xml, loader, mgcpMonitoring);
             } catch (ServletException exception) {
                 logger.error("ServletException during initialization: ", exception);
             }

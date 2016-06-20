@@ -33,7 +33,7 @@ import akka.util.Timeout;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.telestax.servlet.MonitoringService;
+import com.telestax.servlet.monitoring.MonitoringService;
 import gov.nist.javax.sip.header.UserAgent;
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.DateTime;

@@ -701,7 +701,7 @@ public class MmsCallController extends MediaServerController {
         if (is(stopping)) {
             if (sender.equals(this.bridgeEndpoint) && EndpointState.DESTROYED.equals(message.getState())) {
                 this.bridgeEndpoint.tell(new StopObserving(self), self);
-                context().stop(bridgeEndpoint);
+                this.mediaGateway.tell(new DestroyEndpoint(bridgeEndpoint), self());
                 bridgeEndpoint = null;
 
                 if(this.mediaGroup == null && this.bridgeEndpoint == null) {

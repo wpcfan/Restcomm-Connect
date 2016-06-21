@@ -1,4 +1,4 @@
-package com.telestax.servlet.monitoring.com.telestax.servlet.monitoring.mgcp;
+package org.mobicents.servlet.restcomm.mgcp;
 
 import akka.actor.ActorRef;
 

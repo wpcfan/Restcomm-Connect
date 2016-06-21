@@ -44,9 +44,6 @@ import jain.protocol.ip.mgcp.message.parms.ReturnCode;
 import jain.protocol.ip.mgcp.pkg.MgcpEvent;
 import org.mobicents.protocols.mgcp.jain.pkg.AUMgcpEvent;
 import org.mobicents.protocols.mgcp.jain.pkg.AUPackage;
-import org.mobicents.servlet.restcomm.mgcp.monitoring.ConnectionCreated;
-import org.mobicents.servlet.restcomm.mgcp.monitoring.EndpointCreated;
-import org.mobicents.servlet.restcomm.mgcp.monitoring.LinkCreated;
 import org.mobicents.servlet.restcomm.util.RevolvingCounter;
 
 import java.net.InetAddress;
@@ -116,7 +113,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new BridgeEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        mgcpMonitoringService.tell(new EndpointCreated(bridgeEndpoint), self());
+        mgcpMonitoringService.tell(new EndpointCreated(bridgeEndpoint, EndpointCreated.ENDPOINT_TYPE.BRIDGE_ENDPOINT), self());
         return bridgeEndpoint;
     }
 
@@ -132,7 +129,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new ConferenceEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        mgcpMonitoringService.tell(new EndpointCreated(conferenceEndpoint), self());
+        mgcpMonitoringService.tell(new EndpointCreated(conferenceEndpoint, EndpointCreated.ENDPOINT_TYPE.CONFERENCE_ENDPOINT), self());
         return conferenceEndpoint;
     }
 
@@ -152,7 +149,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new IvrEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        mgcpMonitoringService.tell(new EndpointCreated(ivrEndpoint), self());
+        mgcpMonitoringService.tell(new EndpointCreated(ivrEndpoint, EndpointCreated.ENDPOINT_TYPE.IVR_ENDPOINT), self());
         return ivrEndpoint;
     }
 
@@ -184,7 +181,7 @@ public final class MockMediaGateway extends UntypedActor {
                 return new PacketRelayEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
-        mgcpMonitoringService.tell(new EndpointCreated(packetRelayEndpoint), self());
+        mgcpMonitoringService.tell(new EndpointCreated(packetRelayEndpoint, EndpointCreated.ENDPOINT_TYPE.PACKETRELAY_ENDPOINT), self());
         return packetRelayEndpoint;
     }
 

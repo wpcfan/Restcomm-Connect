@@ -80,6 +80,8 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
     private RevolvingCounter sessionIdPool;
     private RevolvingCounter transactionIdPool;
 
+    private ActorRef mgcpMonitoringService;
+
     public MediaGateway() {
         super();
         notificationListeners = new ConcurrentHashMap<String, ActorRef>();
@@ -90,7 +92,7 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
         final CreateConnection request = (CreateConnection) message;
         final MediaSession session = request.session();
         final ActorRef gateway = self();
-        return getContext().actorOf(new Props(new UntypedActorFactory() {
+        ActorRef connection =  getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -98,13 +100,15 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
                 return new Connection(gateway, session, agent, timeout);
             }
         }));
+        mgcpMonitoringService.tell(new ConnectionCreated(connection), self());
+        return connection;
     }
 
     private ActorRef getBridgeEndpoint(final Object message) {
         final CreateBridgeEndpoint request = (CreateBridgeEndpoint) message;
         final ActorRef gateway = self();
         final MediaSession session = request.session();
-        return getContext().actorOf(new Props(new UntypedActorFactory() {
+        ActorRef endpoint = getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -112,13 +116,15 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
                 return new BridgeEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
+        mgcpMonitoringService.tell(new EndpointCreated(endpoint, EndpointCreated.ENDPOINT_TYPE.BRIDGE_ENDPOINT), self());
+        return endpoint;
     }
 
     private ActorRef getConferenceEndpoint(final Object message) {
         final ActorRef gateway = self();
         final CreateConferenceEndpoint request = (CreateConferenceEndpoint) message;
         final MediaSession session = request.session();
-        return getContext().actorOf(new Props(new UntypedActorFactory() {
+        ActorRef endpoint = getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -126,6 +132,8 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
                 return new ConferenceEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
+        mgcpMonitoringService.tell(new EndpointCreated(endpoint, EndpointCreated.ENDPOINT_TYPE.CONFERENCE_ENDPOINT), self());
+        return endpoint;
     }
 
     private MediaGatewayInfo getInfo(final Object message) {
@@ -136,7 +144,7 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
         final ActorRef gateway = self();
         final CreateIvrEndpoint request = (CreateIvrEndpoint) message;
         final MediaSession session = request.session();
-        return getContext().actorOf(new Props(new UntypedActorFactory() {
+        ActorRef endpoint = getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -144,13 +152,15 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
                 return new IvrEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
+        mgcpMonitoringService.tell(new EndpointCreated(endpoint, EndpointCreated.ENDPOINT_TYPE.IVR_ENDPOINT), self());
+        return endpoint;
     }
 
     private ActorRef getLink(final Object message) {
         final CreateLink request = (CreateLink) message;
         final ActorRef gateway = self();
         final MediaSession session = request.session();
-        return getContext().actorOf(new Props(new UntypedActorFactory() {
+        ActorRef link = getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -158,13 +168,15 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
                 return new Link(gateway, session, agent, timeout);
             }
         }));
+        mgcpMonitoringService.tell(new LinkCreated(link),self());
+        return link;
     }
 
     private ActorRef getPacketRelayEndpoint(final Object message) {
         final ActorRef gateway = self();
         final CreatePacketRelayEndpoint request = (CreatePacketRelayEndpoint) message;
         final MediaSession session = request.session();
-        return getContext().actorOf(new Props(new UntypedActorFactory() {
+        ActorRef endpoint = getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -172,6 +184,8 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
                 return new PacketRelayEndpoint(gateway, session, agent, domain, timeout);
             }
         }));
+        mgcpMonitoringService.tell(new EndpointCreated(endpoint, EndpointCreated.ENDPOINT_TYPE.PACKETRELAY_ENDPOINT), self());
+        return endpoint;
     }
 
     private MediaSession getSession() {
@@ -216,6 +230,7 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
         useNat = request.useNat();
         externalIp = request.getExternalIp();
         timeout = request.getTimeout();
+        mgcpMonitoringService = request.getMgcpMonitoringService();
         stack = new JainMgcpStackImpl(localIp, localPort);
         try {
             provider = stack.createProvider();
@@ -289,13 +304,16 @@ public final class MediaGateway extends UntypedActor implements JainMgcpListener
             sender.tell(new MediaGatewayResponse<ActorRef>(endpoint), self);
         } else if (DestroyConnection.class.equals(klass)) {
             final DestroyConnection request = (DestroyConnection) message;
+            mgcpMonitoringService.tell(message, self());
             if (request.connection() != null)
                 context.stop(request.connection());
         } else if (DestroyLink.class.equals(klass)) {
             final DestroyLink request = (DestroyLink) message;
+            mgcpMonitoringService.tell(message, self());
             context.stop(request.link());
         } else if (DestroyEndpoint.class.equals(klass)) {
             final DestroyEndpoint request = (DestroyEndpoint) message;
+            mgcpMonitoringService.tell(message, self());
             if (logger.isInfoEnabled())
                 logger.info("Gateway: "+self().path()+" about to stop endpoint path: "+request.endpoint().path()+" isTerminated: "+request.endpoint().isTerminated()+" sender: "+sender().path());
             while (notificationListeners.containsValue(request.endpoint())) {

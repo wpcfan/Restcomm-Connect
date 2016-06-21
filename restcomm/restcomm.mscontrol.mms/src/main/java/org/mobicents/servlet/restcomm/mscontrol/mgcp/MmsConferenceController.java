@@ -343,7 +343,7 @@ public final class MmsConferenceController extends MediaServerController {
         if (is(stopping)) {
             if (sender.equals(this.cnfEndpoint) && EndpointState.DESTROYED.equals(message.getState())) {
                 this.cnfEndpoint.tell(new StopObserving(self), self);
-                context().stop(cnfEndpoint);
+                mediaGateway.tell(new DestroyEndpoint(cnfEndpoint), self());
                 cnfEndpoint = null;
 
                 if(this.mediaGroup == null && this.cnfEndpoint == null) {
@@ -466,12 +466,6 @@ public final class MmsConferenceController extends MediaServerController {
 
         @Override
         public void execute(Object message) throws Exception {
-            // Cleanup resources
-            if (cnfEndpoint != null) {
-                mediaGateway.tell(new DestroyEndpoint(cnfEndpoint), super.source);
-                cnfEndpoint = null;
-            }
-
             // Notify observers the controller has stopped
             broadcast(new MediaServerControllerStateChanged(state));
 
@@ -489,7 +483,6 @@ public final class MmsConferenceController extends MediaServerController {
         public Inactive(final ActorRef source) {
             super(source, MediaServerControllerState.INACTIVE);
         }
-
     }
 
     private final class Failed extends FinalState {

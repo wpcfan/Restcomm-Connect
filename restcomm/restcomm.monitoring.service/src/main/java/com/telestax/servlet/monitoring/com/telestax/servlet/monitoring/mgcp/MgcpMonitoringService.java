@@ -125,7 +125,7 @@ public class MgcpMonitoringService extends UntypedActor{
         final ActorRef self = self();
         final ActorRef sender = sender();
         if(logger.isInfoEnabled()){
-            logger.info("MonitoringService Processing Message: \"" + klass.getName() + " sender : "+ sender.getClass()+" self is terminated: "+self.isTerminated());
+            logger.info("MgcpMonitoringService Processing Message: \"" + klass.getName() + " sender : "+ sender.getClass()+" self is terminated: "+self.isTerminated());
         }
         if (EndpointCreated.class.equals(klass)) {
             putEndpoint((EndpointCreated) message);

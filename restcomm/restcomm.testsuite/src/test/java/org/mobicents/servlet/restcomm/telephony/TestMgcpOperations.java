@@ -1,6 +1,5 @@
 package org.mobicents.servlet.restcomm.telephony;
 
-import akka.actor.ActorRef;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import org.apache.log4j.Logger;
 import org.cafesip.sipunit.Credential;
@@ -20,13 +19,11 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mobicents.servlet.restcomm.mgcp.monitoring.MgcpMonitoringService;
 
 import javax.sip.address.SipURI;
 import javax.sip.message.Response;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.Collection;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -34,7 +31,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.cafesip.sipunit.SipAssert.assertLastOperationSuccess;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**

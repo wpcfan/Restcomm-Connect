@@ -23,7 +23,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mobicents.servlet.restcomm.http.RestcommCallsTool;
-import org.mobicents.servlet.restcomm.mgcp.monitoring.MgcpMonitoringService;
+import org.mobicents.servlet.restcomm.tools.MgcpMonitoringServiceTool;
 
 import javax.sip.address.SipURI;
 import javax.sip.message.Response;
@@ -153,7 +153,7 @@ public class TestDialVerbPartOne {
         Thread.sleep(2000);
     }
 
-    private String dialConfernceRcml = "<Response><Dial timeLimit=\"50\"><Conference>test</Conference></Dial></Response>";
+    private String dialConfernceRcml = "<Response><Dial timeLimit=\"10\"><Conference>test</Conference></Dial></Response>";
     @Test
     public synchronized void testDialConference() throws InterruptedException {
         stubFor(get(urlPathEqualTo("/1111"))
@@ -197,25 +197,28 @@ public class TestDialVerbPartOne {
         georgeCall.sendInviteOkAck();
         assertTrue(!(georgeCall.getLastReceivedResponse().getStatusCode() >= 400));
 
-        // Wait for the media to play and the call to hangup.
-        bobCall.listenForDisconnect();
-        georgeCall.listenForDisconnect();
+//        // Wait for the media to play and the call to hangup.
+//        bobCall.listenForDisconnect();
+//        georgeCall.listenForDisconnect();
+//
+//        assertTrue(georgeCall.waitForDisconnect(130 * 1000));
+//        assertTrue(bobCall.waitForDisconnect(130 * 1000));
 
-        // Start a new thread for george to wait disconnect
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertTrue(georgeCall.waitForDisconnect(30 * 1000));
-            }
-        }).start();
+        georgeCall.disconnect();
+        bobCall.disconnect();
 
-        // Start a new thread for bob to wait disconnect
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertTrue(bobCall.waitForDisconnect(30 * 1000));
-            }
-        }).start();
+        Thread.sleep(1000);
+
+        JsonObject mgcpMetrics = MgcpMonitoringServiceTool.getInstance().getMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken);
+        assertNotNull(mgcpMetrics);
+        int liveCalls = mgcpMetrics.get("LiveCalls").getAsInt();
+        int links = mgcpMetrics.get("Links").getAsInt();
+        int connections = mgcpMetrics.get("Connections").getAsInt();
+        int endpoints = mgcpMetrics.get("Endpoints").getAsInt();
+        assertTrue(liveCalls == 0);
+        assertTrue(links == 0);
+        assertTrue(connections == 0);
+        assertTrue(endpoints == 0);
     }
 
     @Test

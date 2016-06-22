@@ -25,6 +25,7 @@ import static javax.servlet.sip.SipServletResponse.SC_NOT_FOUND;
 import static javax.servlet.sip.SipServletResponse.SC_OK;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -224,11 +225,20 @@ public class UssdCallManager extends UntypedActor {
                 final Account account = accounts.getAccount(number.getAccountSid());
                 builder.setEmailAddress(account.getEmailAddress());
                 final Sid sid = number.getUssdApplicationSid();
+                URI uri;
                 if (sid != null) {
                     final Application application = applications.getApplication(sid);
-                    builder.setUrl(UriUtils.resolve(application.getRcmlUrl()));
+                    uri = application.getRcmlUrl();
                 } else {
-                    builder.setUrl(UriUtils.resolve(number.getUssdUrl()));
+                    uri = number.getUssdUrl();
+                }
+                if (uri != null) {
+                    builder.setUrl(UriUtils.resolve(uri));
+                } else {
+                    if (logger.isInfoEnabled())
+                        logger.info("USSD Number registration NOT FOUND");
+                    request.createResponse(SipServletResponse.SC_NOT_FOUND).send();
+                    return false;
                 }
                 final String ussdMethod = number.getUssdMethod();
                 if (ussdMethod == null || ussdMethod.isEmpty()) {
@@ -253,7 +263,8 @@ public class UssdCallManager extends UntypedActor {
                 applicationSession.setAttribute(UssdCall.class.getName(), ussdCall);
                 isFoundHostedApp = true;
             } else {
-                logger.info("USSD Number registration NOT FOUND");
+                if (logger.isInfoEnabled())
+                    logger.info("USSD Number registration NOT FOUND");
                 request.createResponse(SipServletResponse.SC_NOT_FOUND).send();
             }
         }

@@ -9,6 +9,9 @@ import org.apache.log4j.Logger;
 
 import javax.ws.rs.core.MediaType;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -67,13 +70,25 @@ public class MgcpMonitoringServiceTool {
         return endpointDetails;
     }
 
-    public boolean assertMgcpMetrics(final String deploymentUrl, final String adminAccountSid, final String adminAuthToken) {
+    public Map<String, Integer> getMgcpMetricsMap(final String deploymentUrl, final String adminAccountSid, final String adminAuthToken) {
+        Map<String, Integer> mgcpMetricsMap = new ConcurrentHashMap<>();
+
         JsonObject mgcpMetrics = getMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken);
         assertNotNull(mgcpMetrics);
-        int liveCalls = mgcpMetrics.get("LiveCalls").getAsInt();
-        int links = mgcpMetrics.get("Links").getAsInt();
-        int connections = mgcpMetrics.get("Connections").getAsInt();
-        int endpoints = mgcpMetrics.get("Endpoints").getAsInt();
+        mgcpMetricsMap.put("LiveCalls", mgcpMetrics.get("LiveCalls").getAsInt());
+        mgcpMetricsMap.put("Links", mgcpMetrics.get("Links").getAsInt());
+        mgcpMetricsMap.put("Connections", mgcpMetrics.get("Connections").getAsInt());
+        mgcpMetricsMap.put("Endpoint", mgcpMetrics.get("Endpoints").getAsInt());
+
+        return mgcpMetricsMap;
+    }
+
+    public boolean assertMgcpMetrics(final String deploymentUrl, final String adminAccountSid, final String adminAuthToken) {
+        Map<String, Integer> mgcpMetricsMap = getMgcpMetricsMap(deploymentUrl, adminAccountSid, adminAuthToken);
+        int liveCalls = mgcpMetricsMap.get("LiveCalls");
+        int links = mgcpMetricsMap.get("Links");
+        int connections = mgcpMetricsMap.get("Connections");
+        int endpoints = mgcpMetricsMap.get("Endpoints");
         if (liveCalls != 0 || endpoints != 0) {
             JsonObject endpointDetails = MgcpMonitoringServiceTool.getInstance().getMgcpEndpointDetails(deploymentUrl.toString(),adminAccountSid, adminAuthToken);
             //Just to add breakpoint during debug so you can examine which endpoints are left in memory

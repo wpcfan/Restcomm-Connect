@@ -37,6 +37,7 @@ import java.net.URL;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import javax.sip.address.SipURI;
 import javax.sip.message.Response;
@@ -483,10 +484,16 @@ public class CallLifecycleTest {
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==1);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==1);
 
+        Map<String, Integer> mgcpMetricsMap = MgcpMonitoringServiceTool.getInstance().getMgcpMetricsMap(deploymentUrl.toString(), adminAccountSid, adminAuthToken);
+
+        assertTrue(mgcpMetricsMap.size() > 0);
+
         assertTrue(georgeCall.waitForIncomingCall(5000));
         assertTrue(georgeCall.sendIncomingCallResponse(Response.TRYING, "George-Trying", 3600));
         assertTrue(georgeCall.sendIncomingCallResponse(Response.FORBIDDEN, "George-Forbidden", 3600));
         assertTrue(georgeCall.waitForAck(5000));
+
+        mgcpMetricsMap = MgcpMonitoringServiceTool.getInstance().getMgcpMetricsMap(deploymentUrl.toString(), adminAccountSid, adminAuthToken);
 
         bobCall.listenForDisconnect();
         assertTrue(bobCall.waitForDisconnect(5000));

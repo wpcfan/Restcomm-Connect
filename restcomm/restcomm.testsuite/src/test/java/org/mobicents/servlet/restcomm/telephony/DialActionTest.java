@@ -20,30 +20,9 @@
 
 package org.mobicents.servlet.restcomm.telephony;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
-import static org.cafesip.sipunit.SipAssert.assertLastOperationSuccess;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.net.URL;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.sip.address.SipURI;
-import javax.sip.header.Header;
-import javax.sip.message.Response;
-
-import com.google.gson.JsonArray;
-import org.apache.commons.lang.ArrayUtils;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import com.google.gson.JsonObject;
 import org.apache.log4j.Logger;
 import org.cafesip.sipunit.SipCall;
 import org.cafesip.sipunit.SipPhone;
@@ -64,11 +43,28 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mobicents.servlet.restcomm.http.RestcommCallsTool;
+import org.mobicents.servlet.restcomm.tools.MgcpMonitoringServiceTool;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.verification.LoggedRequest;
-import com.google.gson.JsonObject;
+import javax.sip.address.SipURI;
+import javax.sip.header.Header;
+import javax.sip.message.Response;
+import java.net.URL;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static org.cafesip.sipunit.SipAssert.assertLastOperationSuccess;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test for Dial Action attribute. Reference: https://www.twilio.com/docs/api/twiml/dial#attributes-action The 'action'
@@ -242,6 +238,8 @@ public class DialActionTest {
         //Since ALICE is not registered, CallManager will ask to hangup the call, thus we never have outbound call
 //        JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
 //        assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
     
     @Test //No regression test for https://github.com/Mobicents/RestComm/issues/505
@@ -302,6 +300,8 @@ public class DialActionTest {
         //Since ALICE is not registered, CallManager will ask to hangup the call, thus we never have outbound call
 //        JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
 //        assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -382,6 +382,8 @@ public class DialActionTest {
         assertNotNull(dialCallSid);
         JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
         assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -460,6 +462,8 @@ public class DialActionTest {
         assertNotNull(dialCallSid);
         JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
         assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
     
     @Test
@@ -538,6 +542,8 @@ public class DialActionTest {
         assertNotNull(dialCallSid);
         JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
         assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
     
     @Test
@@ -613,6 +619,8 @@ public class DialActionTest {
         assertNotNull(dialCallSid);
         JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
         assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -685,6 +693,8 @@ public class DialActionTest {
         assertNotNull(dialCallSid);
         JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
         assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -752,6 +762,8 @@ public class DialActionTest {
         assertTrue(requestBody.contains("DialCallDuration=0"));
         assertTrue(requestBody.contains("CallStatus=completed"));
         Iterator iter = Arrays.asList(params).iterator();
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -844,6 +856,8 @@ public class DialActionTest {
         assertNotNull(dialCallSid);
         JsonObject cdr = RestcommCallsTool.getInstance().getCall(deploymentUrl.toString(), adminAccountSid, adminAuthToken, dialCallSid);
         assertNotNull(cdr);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test //TODO: PASSES when run individually. to check
@@ -939,6 +953,8 @@ public class DialActionTest {
         assertTrue(dialCdr.get("duration").getAsString().equalsIgnoreCase("3")); //Only talk time
         assertTrue(dialCdr.get("ring_duration").getAsString().equalsIgnoreCase("2")); //Only Ringing time
         assertTrue(dialCdr.get("direction").getAsString().equalsIgnoreCase("outbound-api"));
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
 
@@ -1031,6 +1047,8 @@ public class DialActionTest {
         assertTrue(dialCdr.get("duration").getAsString().equalsIgnoreCase("0")); //Only talk time
         assertTrue(dialCdr.get("ring_duration").getAsString().equalsIgnoreCase("2")); //Only Ringing time
         assertTrue(dialCdr.get("direction").getAsString().equalsIgnoreCase("outbound-api"));
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Deployment(name = "DialAction", managed = true, testable = false)

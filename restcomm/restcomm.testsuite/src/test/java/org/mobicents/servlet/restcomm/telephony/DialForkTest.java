@@ -11,17 +11,20 @@ import org.cafesip.sipunit.SipTransaction;
 import org.jboss.arquillian.container.mss.extension.SipStackTool;
 import org.jboss.arquillian.container.test.api.Deployer;
 import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.container.test.impl.client.deployment.ThreadContext;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.jboss.shrinkwrap.resolver.api.maven.archive.ShrinkWrapMaven;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mobicents.servlet.restcomm.http.RestcommCallsTool;
+import org.mobicents.servlet.restcomm.tools.MgcpMonitoringServiceTool;
 import org.mobicents.servlet.restcomm.tools.MonitoringServiceTool;
-import org.tritonus.share.sampled.file.THeaderlessAudioFileWriter;
 
 import javax.sip.address.SipURI;
 import javax.sip.message.Response;
@@ -31,11 +34,19 @@ import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.cafesip.sipunit.SipAssert.assertLastOperationSuccess;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for the Dial forking
@@ -284,6 +295,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     //Non regression test for https://telestax.atlassian.net/browse/RESTCOMM-585
@@ -398,6 +411,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     @Test
@@ -508,6 +523,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     @Test
@@ -619,6 +636,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     @Test
@@ -726,6 +745,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialForkWithTimeout = "<Response><Dial timeout=\"2\"><Client>alice</Client><Sip>sip:henrique@127.0.0.1:5092</Sip><Number>+131313</Number></Dial></Response>";
@@ -837,6 +858,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialForkWithTimeout15 = "<Response><Dial timeout=\"15\"><Client>alice</Client><Sip>sip:henrique@127.0.0.1:5092</Sip><Number>+131313</Number></Dial></Response>";
@@ -946,6 +969,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
 
@@ -1090,6 +1115,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     @Test
@@ -1229,6 +1256,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialAliceRcml = "<Response><Dial><Client>alice</Client></Dial></Response>";
@@ -1305,6 +1334,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialAliceRcmlWithPlay = "<Response><Play>http://127.0.0.1:8080/restcomm/audio/demo-prompt.wav</Play><Dial><Client>alice</Client></Dial></Response>";
@@ -1381,6 +1412,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialAliceRcmlWithInvalidPlay = "<Response><Play>http://127.0.0.1:8080/restcomm/audio/demo-prompt13.wav</Play><Dial><Client>alice</Client></Dial></Response>";
@@ -1446,6 +1479,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialSequential = "<Response><Dial timeout=\"5\"><Sip>sip:nonexistent@127.0.0.1:5566</Sip></Dial><Dial timeout=\"5\"><Sip>sip:nonexistent2@127.0.0.1:6655</Sip></Dial><Dial><Sip>sip:henrique@127.0.0.1:5092</Sip></Dial></Response>";
@@ -1537,6 +1572,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     private String dialForkTwoSipUrisRcml = "<Response><Dial><Sip>sip:fotini@127.0.0.1:5093</Sip><Sip>sip:henrique@127.0.0.1:5092</Sip></Dial></Response>";
@@ -1630,6 +1667,8 @@ public class DialForkTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(), adminAccountSid, adminAuthToken) == 0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));;
     }
 
     @Deployment(name = "DialForkTest", managed = true, testable = false)

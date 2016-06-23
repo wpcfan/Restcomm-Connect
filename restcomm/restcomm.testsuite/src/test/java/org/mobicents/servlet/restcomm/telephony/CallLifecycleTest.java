@@ -65,6 +65,7 @@ import org.mobicents.servlet.restcomm.http.RestcommCallsTool;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.google.gson.JsonObject;
+import org.mobicents.servlet.restcomm.tools.MgcpMonitoringServiceTool;
 import org.mobicents.servlet.restcomm.tools.MonitoringServiceTool;
 
 /**
@@ -225,6 +226,8 @@ public class CallLifecycleTest {
         logger.info("LiveCallsArraySize: "+liveCallsArraySize);
         assertTrue(liveCalls==0);
         assertTrue(liveCallsArraySize==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -294,6 +297,8 @@ public class CallLifecycleTest {
         assertTrue(status.equalsIgnoreCase("canceled"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialAliceRcml = "<Response><Dial><Client>alice</Client></Dial></Response>";
@@ -369,6 +374,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialNumberRcml = "<Response><Dial><Number>+131313</Number></Dial></Response>";
@@ -440,6 +447,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -505,6 +514,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -577,6 +588,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
     
     
@@ -655,6 +668,8 @@ public class CallLifecycleTest {
         georgePhone = null;
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialNumberRcmlWithTimeout = "<Response><Dial timeout=\"10\"><Number>+131313</Number></Dial></Response>";
@@ -724,6 +739,8 @@ public class CallLifecycleTest {
         assertTrue(status.equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
     
     @Test
@@ -786,6 +803,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
     
     @Test
@@ -848,6 +867,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialAliceRcmlInvalidRCML = "%%<Response><Dial><Client>alice</Client></Dial></Response>";
@@ -911,6 +932,8 @@ public class CallLifecycleTest {
         assertTrue(jsonObj.get("status").getAsString().equalsIgnoreCase("completed"));
         assertTrue(MonitoringServiceTool.getInstance().getLiveCalls(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
         assertTrue(MonitoringServiceTool.getInstance().getLiveCallsArraySize(deploymentUrl.toString(),adminAccountSid, adminAuthToken)==0);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Deployment(name = "DialAction", managed = true, testable = false)

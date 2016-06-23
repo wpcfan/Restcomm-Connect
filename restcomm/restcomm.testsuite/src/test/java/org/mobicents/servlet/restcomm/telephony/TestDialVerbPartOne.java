@@ -1,6 +1,5 @@
 package org.mobicents.servlet.restcomm.telephony;
 
-import akka.actor.ActorRef;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -29,7 +28,6 @@ import javax.sip.address.SipURI;
 import javax.sip.message.Response;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.Collection;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -197,28 +195,12 @@ public class TestDialVerbPartOne {
         georgeCall.sendInviteOkAck();
         assertTrue(!(georgeCall.getLastReceivedResponse().getStatusCode() >= 400));
 
-//        // Wait for the media to play and the call to hangup.
-//        bobCall.listenForDisconnect();
-//        georgeCall.listenForDisconnect();
-//
-//        assertTrue(georgeCall.waitForDisconnect(130 * 1000));
-//        assertTrue(bobCall.waitForDisconnect(130 * 1000));
-
         georgeCall.disconnect();
         bobCall.disconnect();
 
         Thread.sleep(1000);
 
-        JsonObject mgcpMetrics = MgcpMonitoringServiceTool.getInstance().getMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken);
-        assertNotNull(mgcpMetrics);
-        int liveCalls = mgcpMetrics.get("LiveCalls").getAsInt();
-        int links = mgcpMetrics.get("Links").getAsInt();
-        int connections = mgcpMetrics.get("Connections").getAsInt();
-        int endpoints = mgcpMetrics.get("Endpoints").getAsInt();
-        assertTrue(liveCalls == 0);
-        assertTrue(links == 0);
-        assertTrue(connections == 0);
-        assertTrue(endpoints == 0);
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -264,25 +246,32 @@ public class TestDialVerbPartOne {
         georgeCall.sendInviteOkAck();
         assertTrue(!(georgeCall.getLastReceivedResponse().getStatusCode() >= 400));
 
-        // Wait for the media to play and the call to hangup.
-        fotiniCall.listenForDisconnect();
-        georgeCall.listenForDisconnect();
+//        // Wait for the media to play and the call to hangup.
+//        fotiniCall.listenForDisconnect();
+//        georgeCall.listenForDisconnect();
+//
+//        // Start a new thread for george to wait disconnect
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                assertTrue(georgeCall.waitForDisconnect(30 * 1000));
+//            }
+//        }).start();
+//
+//        // Start a new thread for bob to wait disconnect
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                assertTrue(fotiniCall.waitForDisconnect(30 * 1000));
+//            }
+//        }).start();
 
-        // Start a new thread for george to wait disconnect
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertTrue(georgeCall.waitForDisconnect(30 * 1000));
-            }
-        }).start();
+        fotiniCall.disconnect();
+        georgeCall.disconnect();
 
-        // Start a new thread for bob to wait disconnect
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertTrue(fotiniCall.waitForDisconnect(30 * 1000));
-            }
-        }).start();
+        Thread.sleep(1000);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -309,6 +298,8 @@ public class TestDialVerbPartOne {
         assertTrue(bobCall.waitOutgoingCallResponse(10000));
         SipResponse lastResponse = bobCall.getLastReceivedResponse();
         assertTrue(lastResponse.getStatusCode() == 503);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialUriRcml = "<Response><Dial timeLimit=\"100000\" timeout=\"1000000\"><Uri>sip:alice@127.0.0.1:5091</Uri></Dial><Hangup/></Response>";
@@ -362,6 +353,10 @@ public class TestDialVerbPartOne {
         bobCall.listenForDisconnect();
         assertTrue(bobCall.waitForDisconnect(30 * 1000));
         assertTrue(bobCall.respondToDisconnect());
+
+        Thread.sleep(1000);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -433,6 +428,8 @@ public class TestDialVerbPartOne {
         JsonArray cdrsArray = cdrs.get("calls").getAsJsonArray();
         System.out.println("cdrsArray.size(): " + cdrsArray.size());
         assertTrue((cdrsArray.size() - initialCdrSize) == 2);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Test
@@ -504,6 +501,8 @@ public class TestDialVerbPartOne {
         assertTrue(inboundCdrDuration==8);
         assertTrue(outboundCdrDuration==3);
         assertTrue(outboundCdrRinging==5);
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialClientRcml = "<Response><Dial timeLimit=\"10\" timeout=\"10\"><Client>alice</Client></Dial></Response>";
@@ -557,6 +556,8 @@ public class TestDialVerbPartOne {
         aliceCall.listenForDisconnect();
         assertTrue(aliceCall.waitForDisconnect(30 * 1000));
         assertTrue(aliceCall.respondToDisconnect());
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     final String screeningResponse = "<Response></Response>";
@@ -619,6 +620,8 @@ public class TestDialVerbPartOne {
         aliceCall.listenForDisconnect();
         assertTrue(aliceCall.waitForDisconnect(30 * 1000));
         assertTrue(aliceCall.respondToDisconnect());
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     private String dialClientRcmlWithScreeningRelative = "<Response><Dial timeLimit=\"10\" timeout=\"10\"><Client url=\"http://127.0.0.1:8090/screening\" method=\"GET\">alice</Client></Dial></Response>";
@@ -680,6 +683,8 @@ public class TestDialVerbPartOne {
 
         assertTrue(aliceCall.waitForDisconnect(30 * 1000));
         assertTrue(aliceCall.respondToDisconnect());
+
+        assertTrue(MgcpMonitoringServiceTool.getInstance().assertMgcpMetrics(deploymentUrl.toString(), adminAccountSid, adminAuthToken));
     }
 
     @Deployment(name = "TestDialVerbPartOne", managed = true, testable = false)

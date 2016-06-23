@@ -148,6 +148,7 @@ public final class Link extends UntypedActor {
     public void onReceive(final Object message) throws Exception {
         final Class<?> klass = message.getClass();
         final State state = fsm.state();
+        final ActorRef sender = sender();
         if (Observe.class.equals(klass)) {
             observe(message);
         } else if (StopObserving.class.equals(klass)) {
@@ -307,12 +308,15 @@ public final class Link extends UntypedActor {
             final InitializeLink request = (InitializeLink) message;
             primaryEndpoint = request.primaryEndpoint();
             secondaryEndpoint = request.secondaryEndpoint();
-            logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" ,primaryEndpoint: "+primaryEndpoint.path()+" ,secondaryEndpoint: "+secondaryEndpoint.path());
+            if (logger.isInfoEnabled())
+                logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" ,primaryEndpoint: "+primaryEndpoint.path()+" ,secondaryEndpoint: "+secondaryEndpoint.path());
             if (primaryEndpoint != null && !primaryEndpoint.isTerminated()) {
                 primaryEndpoint.tell(new InviteEndpoint(), source);
-                logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" InviteEndpoint sent to primaryEndpoint: "+primaryEndpoint.path());
+                if (logger.isInfoEnabled())
+                    logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" InviteEndpoint sent to primaryEndpoint: "+primaryEndpoint.path());
             } else {
-                logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" InviteEndpoint DIDN'T sent to primaryEndpoint: "+primaryEndpoint.path()+" primaryEndpoint is Terminated: "+primaryEndpoint.isTerminated());
+                if (logger.isInfoEnabled())
+                    logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" InviteEndpoint DIDN'T sent to primaryEndpoint: "+primaryEndpoint.path()+" primaryEndpoint is Terminated: "+primaryEndpoint.isTerminated());
             }
         }
     }
@@ -329,7 +333,8 @@ public final class Link extends UntypedActor {
             if (secondaryEndpoint != null) {
                 secondaryEndpoint.tell(new InviteEndpoint(), source);
             }
-            logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" ,primaryEndpointId: "+primaryEndpointId+" ,secondaryEndpoint: "+secondaryEndpoint.path()+" secondaryEndpoint isTerminated: "+secondaryEndpoint.isTerminated());
+            if (logger.isInfoEnabled())
+                logger.info("Link: "+self().path()+" ,state: "+fsm.state()+" ,primaryEndpointId: "+primaryEndpointId+" ,secondaryEndpoint: "+secondaryEndpoint.path()+" secondaryEndpoint isTerminated: "+secondaryEndpoint.isTerminated());
         }
     }
 
@@ -392,14 +397,23 @@ public final class Link extends UntypedActor {
             final String sessionId = Integer.toString(session.id());
             final CallIdentifier callId = new CallIdentifier(sessionId);
             ModifyConnection mdcx = null;
-            switch (request.type()) {
-                case PRIMARY: {
-                    mdcx = new ModifyConnection(source, callId, primaryEndpointId, primaryConnId);
-                }
-                case SECONDARY: {
-                    mdcx = new ModifyConnection(source, callId, secondaryEndpointId, secondaryConnId);
-                }
-            }
+//            switch (request.type()) {
+//                case PRIMARY: {
+//                    if (logger.isInfoEnabled()) {
+//                        logger.info("Modifying Primary connection");
+//                    }
+//                    mdcx = new ModifyConnection(source, callId, primaryEndpointId, primaryConnId);
+//                    break;
+//                }
+//                case SECONDARY: {
+//                    if (logger.isInfoEnabled()) {
+//                        logger.info("Modifying Secondary Connection");
+//                    }
+//                    mdcx = new ModifyConnection(source, callId, secondaryEndpointId, secondaryConnId);
+//                    break;
+//                }
+//            }
+            mdcx = new ModifyConnection(source, callId, secondaryEndpointId, secondaryConnId);
             final ConnectionMode mode = request.mode();
             if (mode != null) {
                 mdcx.setMode(mode);

@@ -136,6 +136,7 @@ public class MgcpMediaGroup extends MediaGroup {
         transitions.add(new Transition(acquiringLink, initializingLink));
         transitions.add(new Transition(initializingLink, inactive));
         transitions.add(new Transition(initializingLink, openingLink));
+        transitions.add(new Transition(openingLink, active));
         transitions.add(new Transition(openingLink, inactive));
         transitions.add(new Transition(openingLink, deactivating));
         transitions.add(new Transition(openingLink, updatingLink));
@@ -273,8 +274,8 @@ public class MgcpMediaGroup extends MediaGroup {
                 }
             } else if (LinkStateChanged.State.OPEN == response.state()) {
                 if (openingLink.equals(state)) {
-                    fsm.transition(message, updatingLink);
-                } else if (updatingLink.equals(state)) {
+//                    fsm.transition(message, updatingLink);
+//                } else if (updatingLink.equals(state)) {
                     fsm.transition(message, active);
                 }
                 if (openingInternalLink.equals(state)) {

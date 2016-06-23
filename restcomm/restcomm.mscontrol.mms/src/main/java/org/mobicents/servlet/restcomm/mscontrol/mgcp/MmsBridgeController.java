@@ -331,7 +331,7 @@ public class MmsBridgeController extends MediaServerController {
         if (is(stopping)) {
             if (sender.equals(this.endpoint) && EndpointState.DESTROYED.equals(message.getState())) {
                 this.endpoint.tell(new StopObserving(self), self);
-                context().stop(endpoint);
+                this.mediaGateway.tell(new DestroyEndpoint(endpoint), self());
                 endpoint = null;
 
                 if(this.mediaGroup == null && this.endpoint == null) {

@@ -49,6 +49,7 @@ import org.mobicents.servlet.restcomm.mgcp.ConnectionStateChanged;
 import org.mobicents.servlet.restcomm.mgcp.CreateBridgeEndpoint;
 import org.mobicents.servlet.restcomm.mgcp.CreateConnection;
 import org.mobicents.servlet.restcomm.mgcp.CreateLink;
+import org.mobicents.servlet.restcomm.mgcp.DestroyConnection;
 import org.mobicents.servlet.restcomm.mgcp.DestroyEndpoint;
 import org.mobicents.servlet.restcomm.mgcp.DestroyLink;
 import org.mobicents.servlet.restcomm.mgcp.EndpointState;
@@ -510,6 +511,7 @@ public class MmsCallController extends MediaServerController {
                 } else if (is(muting) || is(unmuting)) {
                     fsm.transition(message, closingRemoteConnection);
                 } else if (is(closingRemoteConnection)) {
+                    this.mediaGateway.tell(new DestroyConnection(remoteConn), self());
                     remoteConn = null;
                     if (this.internalLink != null) {
                         fsm.transition(message, closingInternalLink);
@@ -1088,14 +1090,12 @@ public class MmsCallController extends MediaServerController {
             }
 
             if (remoteConn != null) {
-                // mediaGateway.tell(new DestroyConnection(remoteConn), source);
-                context().stop(remoteConn);
+                 mediaGateway.tell(new DestroyConnection(remoteConn), self());
                 remoteConn = null;
             }
 
             if (internalLink != null) {
-                // mediaGateway.tell(new DestroyLink(internalLink), source);
-                context().stop(internalLink);
+                 mediaGateway.tell(new DestroyLink(internalLink), self());
                 internalLink = null;
             }
 

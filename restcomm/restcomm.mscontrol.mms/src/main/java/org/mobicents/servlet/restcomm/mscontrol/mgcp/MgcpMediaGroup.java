@@ -600,7 +600,6 @@ public class MgcpMediaGroup extends MediaGroup {
                     + internalLinkEndpoint.path() + " sender: " + sender().path());
             }
             gateway.tell(new DestroyEndpoint(internalLinkEndpoint), null);
-            getContext().stop(internalLinkEndpoint);
             internalLinkEndpoint = null;
         }
         if (ivr != null) {
@@ -608,22 +607,21 @@ public class MgcpMediaGroup extends MediaGroup {
                 logger.info("MediaGroup :" + self().path() + " at postStop, about to stop ivr endpoint :" + ivr.path());
             }
             gateway.tell(new DestroyEndpoint(ivr), null);
-            getContext().stop(ivr);
             ivr = null;
         }
         if(link != null) {
             if(logger.isInfoEnabled()) {
                 logger.info("MediaGroup :" + self().path() + " at postStop, about to stop link :" + link.path());
             }
-            getContext().stop(link);
+            gateway.tell(new DestroyLink(link), self());
             link = null;
         }
         if(internalLink != null) {
             if(logger.isInfoEnabled()) {
                 logger.info("MediaGroup :" + self().path() + " at postStop, about to stop internal link :" + internalLink.path());
             }
-            getContext().stop(link);
-            link = null;
+            gateway.tell(new DestroyLink(internalLink), self());
+            internalLink = null;
         }
         getContext().stop(self());
         super.postStop();

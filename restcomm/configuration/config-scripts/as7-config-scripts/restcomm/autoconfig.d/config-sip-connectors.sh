@@ -10,8 +10,14 @@ configConnectors() {
 	static_address="$1"
 
     #delete additional connectors if any added to erlier run of the script.
-    grep -q "###new-conectors###" $FILE && sed '/###new-conectors###/,/###new-conectors###/d' $FILE > $FILE.bak
-    mv $FILE.bak $FILE
+    if  grep -q "<!-- new-conectors -->" $FILE
+    then
+          echo "Additional Connectors Created earlier, going to delete the"
+          sed '/<!-- new-conectors -->/,/<!-- new-conectors -->/d' $FILE > $FILE.bak
+          mv $FILE.bak $FILE
+    else
+         echo "Additional Connectors not Created earlier"
+    fi
 
 	#Check for Por Offset
 	if (( $PORT_OFFSET > 0 )); then
@@ -58,9 +64,15 @@ configSocketbinding() {
 FILE=$RESTCOMM_HOME/standalone/configuration/standalone-sip.xml
 
     #delete additional bindings if any added to erlier run of the script.
-    grep -q "###new-conectors###" $FILE && sed '/###new-bindings###/,/###new-bindings###/d' $FILE > $FILE.bak
-    mv $FILE.bak $FILE
-
+    if grep -q "###new-binding###"  $FILE
+    then
+          echo "Additional Bindings Created earlier, going to delete the"
+          sed '/<!-- new-bindings -->/,/<!-- new-bindings -->/d' $FILE > $FILE.bak
+          mv $FILE.bak $FILE
+    else
+         echo "Additional Bindings not Created earlier"
+    fi
+   
 	#check for port offset
 	if (( $PORT_OFFSET > 0 )); then
     	sed -i "s|\port-offset=\".*\"|port-offset=\"${PORT_OFFSET}\"|" $FILE
@@ -139,15 +151,15 @@ setInitialSign(){
       		LB_INTERNAL_IP=$LB_PUBLIC_IP
 		fi
          sed -e "/path-name=\"org.mobicents.ha.balancing.only\"/a\
-               ###new-conectors###" $FILE > $FILE.bak
+               <!-- new-conectors -->" $FILE > $FILE.bak
 
     else
           sed -e "/path-name=\"org.mobicents.ext\"/a\
-			   ###new-conectors###" $FILE > $FILE.bak
+			   <!-- new-conectors -->" $FILE > $FILE.bak
 	fi
 	mv $FILE.bak $FILE
 
-	sed "/name=\"management-https\"/a ###new-bindings###" $FILE > $FILE.bak
+	sed "/name=\"management-https\"/a <!-- new-bindings -->" $FILE > $FILE.bak
   mv $FILE.bak $FILE
 
 }
@@ -158,15 +170,15 @@ setFinalSign(){
       		LB_INTERNAL_IP=$LB_PUBLIC_IP
 		fi
          sed -e "/path-name=\"org.mobicents.ha.balancing.only\"/a\
-               ###new-conectors###" $FILE > $FILE.bak
+               <!-- new-conectors -->" $FILE > $FILE.bak
 
     else
           sed -e "/path-name=\"org.mobicents.ext\"/a\
-			   ###new-conectors###" $FILE > $FILE.bak
+			   <!-- new-conectors -->" $FILE > $FILE.bak
 	fi
 	mv $FILE.bak $FILE
 
-	sed "/name=\"management-https\"/a ###new-bindings###" $FILE > $FILE.bak
+	sed "/name=\"management-https\"/a <!-- new-bindings -->" $FILE > $FILE.bak
   mv $FILE.bak $FILE
 }
 

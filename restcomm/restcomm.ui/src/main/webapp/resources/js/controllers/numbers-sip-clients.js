@@ -4,7 +4,7 @@ var rcMod = angular.module('rcApp');
 
 // Numbers : RestComm Clients : List ------------------------------------------------
 
-rcMod.controller('ClientsCtrl', function($scope, $resource, $modal, $dialog, SessionService, RCommClients, RCommApps) {
+rcMod.controller('ClientsCtrl', function($scope, $resource, $modal, $dialog, SessionService, RCommClients, RCommApps, Notifications) {
 
   $scope.sid = SessionService.get("sid");
 
@@ -28,7 +28,7 @@ rcMod.controller('ClientsCtrl', function($scope, $resource, $modal, $dialog, Ses
 
   $scope.showRegisterSIPClientModal = function () {
     var registerSIPClientModal = $modal.open({
-      controller: ClientDetailsCtrl,
+      controller: 'ClientDetailsCtrl',
       scope: $scope,
       templateUrl: 'modules/modals/modal-register-sip-client.html',
       resolve: { localApps: function (rappService) { return rappService.refreshLocalApps();} }
@@ -48,7 +48,7 @@ rcMod.controller('ClientsCtrl', function($scope, $resource, $modal, $dialog, Ses
   // delete RestComm client -------------------------------------------------------
 
   $scope.confirmClientDelete = function(client) {
-    confirmClientDelete(client, $dialog, $scope, RCommClients);
+    confirmClientDelete(client, $dialog, $scope, Notifications, RCommClients);
   }
 
   $scope.clientsList = RCommClients.query({accountSid:$scope.sid});
@@ -56,7 +56,7 @@ rcMod.controller('ClientsCtrl', function($scope, $resource, $modal, $dialog, Ses
 
 // Numbers : RestComm Clients : Details (also used for Modal) -----------------------
 
-var ClientDetailsCtrl = function ($scope, $stateParams, $location, $dialog, $modalInstance, SessionService, RCommClients, RCommApps, Notifications, localApps) {
+rcMod.controller('ClientDetailsCtrl', function ($scope, $stateParams, $location, $dialog, $modalInstance, SessionService, RCommClients, RCommApps, Notifications, localApps) {
 
 	$scope.localApps = localApps;
   // are we editing details...
@@ -143,6 +143,7 @@ var ClientDetailsCtrl = function ($scope, $stateParams, $location, $dialog, $mod
     RCommClients.update({accountSid: $scope.sid, clientSid: $scope.clientSid}, $.param(params),
       function() { // success
         Notifications.success('RestComm Client "' + client.login + '" updated successfully!');
+        $location.path( "/numbers/clients" );
       },
       function() { // error
         Notifications.error('Failed to update client "' + client.login + '".');
@@ -151,11 +152,11 @@ var ClientDetailsCtrl = function ($scope, $stateParams, $location, $dialog, $mod
   };
 
   $scope.confirmClientDelete = function(client) {
-    confirmClientDelete(client, $dialog, $scope, RCommClients, $location);
+    confirmClientDelete(client, $dialog, $scope, Notifications, RCommClients, $location);
   }
-}
+});
 
-var confirmClientDelete = function(client, $dialog, $scope, RCommClients, $location) {
+var confirmClientDelete = function(client, $dialog, $scope, Notifications, RCommClients, $location) {
   var title = 'Delete RestComm Client \'' + client.login + '\'';
   var msg = 'Are you sure you want to delete RestComm Client ' + client.login + ' (' + client.friendly_name +  ') ? This action cannot be undone.';
   var btns = [{result:'cancel', label: 'Cancel', cssClass: 'btn-default'}, {result:'confirm', label: 'Delete!', cssClass: 'btn-danger'}];
@@ -166,15 +167,16 @@ var confirmClientDelete = function(client, $dialog, $scope, RCommClients, $locat
       if (result == "confirm") {
         RCommClients.delete({accountSid:$scope.sid, clientSid:client.sid}, {},
           function() {
+        	Notifications.success('RestComm Client "' + client.login + '" has been deleted.');
             if($location) {
-              $location.path( "/numbers/clients/" );
+              $location.path( "/numbers/clients" );
             }
             else {
               $scope.clientsList = RCommClients.query({accountSid:$scope.sid});
             }
           },
           function() {
-            // TODO: Show alert on delete failure...
+        	  Notifications.error('Failed to delete client "' + client.login + '".');
           }
         );
       }

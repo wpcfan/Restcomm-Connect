@@ -169,8 +169,8 @@ public class OrganizationsEndpointTest {
         }
 
         // Update master Account's Organization
-        RestcommAccountsTool.getInstance().updateAccount(deploymentUrl.toString(), primaryAccountSid, primaryAuthToken,
-                primaryUsername, primaryAuthToken, primaryAccountSid, null, defaultOrganization);
+        RestcommAccountsTool.getInstance().updateAccount(deploymentUrl.toString(), primaryUsername, primaryAuthToken,
+                primaryAccountSid, null, null, null, null, null, defaultOrganization);
 
         // Check if all sub accounts were updated just like the master Account
         for (int i = 0; i < organizationAccounts.length; i++) {
@@ -181,8 +181,8 @@ public class OrganizationsEndpointTest {
         }
 
         // Rollback master Account's Organization for next tests
-        RestcommAccountsTool.getInstance().updateAccount(deploymentUrl.toString(), primaryAccountSid, primaryAuthToken,
-                primaryUsername, primaryAuthToken, primaryAccountSid, null, foobarOrganization);
+        RestcommAccountsTool.getInstance().updateAccount(deploymentUrl.toString(), primaryUsername, primaryAuthToken,
+                primaryAccountSid, null, null, null, null, null, foobarOrganization);
 
         // Check if all sub accounts were updated just like the master Account
         for (int i = 0; i < organizationAccounts.length; i++) {

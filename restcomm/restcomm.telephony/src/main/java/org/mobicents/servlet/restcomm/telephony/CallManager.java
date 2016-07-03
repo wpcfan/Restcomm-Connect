@@ -19,39 +19,22 @@
  */
 package org.mobicents.servlet.restcomm.telephony;
 
-import static akka.pattern.Patterns.ask;
-import static javax.servlet.sip.SipServlet.OUTBOUND_INTERFACES;
-import static javax.servlet.sip.SipServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.sip.SipServletResponse.SC_NOT_FOUND;
-import static javax.servlet.sip.SipServletResponse.SC_OK;
-import static org.mobicents.servlet.restcomm.telephony.CreateCall.Type.CLIENT;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-
-import javax.servlet.ServletContext;
-import javax.servlet.sip.AuthInfo;
-import javax.servlet.sip.ServletParseException;
-import javax.servlet.sip.SipApplicationSession;
-import javax.servlet.sip.SipApplicationSessionEvent;
-import javax.servlet.sip.SipFactory;
-import javax.servlet.sip.SipServletRequest;
-import javax.servlet.sip.SipServletResponse;
-import javax.servlet.sip.SipSession;
-import javax.servlet.sip.SipURI;
-import javax.sip.message.Response;
-
+import akka.actor.ActorContext;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.ReceiveTimeout;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorContext;
+import akka.actor.UntypedActorFactory;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
+import akka.util.Timeout;
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
+import com.telestax.servlet.MonitoringService;
+import gov.nist.javax.sip.header.UserAgent;
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.DateTime;
 import org.mobicents.servlet.restcomm.configuration.RestcommConfiguration;
@@ -80,26 +63,40 @@ import org.mobicents.servlet.restcomm.telephony.util.B2BUAHelper;
 import org.mobicents.servlet.restcomm.telephony.util.CallControlHelper;
 import org.mobicents.servlet.restcomm.util.OrganizationUtils;
 import org.mobicents.servlet.restcomm.util.UriUtils;
-
-import com.google.i18n.phonenumbers.NumberParseException;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.telestax.servlet.MonitoringService;
-
-import akka.actor.ActorContext;
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.actor.ReceiveTimeout;
-import akka.actor.UntypedActor;
-import akka.actor.UntypedActorContext;
-import akka.actor.UntypedActorFactory;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
-import akka.util.Timeout;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
+
+import javax.servlet.ServletContext;
+import javax.servlet.sip.AuthInfo;
+import javax.servlet.sip.ServletParseException;
+import javax.servlet.sip.SipApplicationSession;
+import javax.servlet.sip.SipApplicationSessionEvent;
+import javax.servlet.sip.SipFactory;
+import javax.servlet.sip.SipServletRequest;
+import javax.servlet.sip.SipServletResponse;
+import javax.servlet.sip.SipSession;
+import javax.servlet.sip.SipURI;
+import javax.sip.message.Response;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
+
+import static akka.pattern.Patterns.ask;
+import static javax.servlet.sip.SipServlet.OUTBOUND_INTERFACES;
+import static javax.servlet.sip.SipServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.sip.SipServletResponse.SC_NOT_FOUND;
+import static javax.servlet.sip.SipServletResponse.SC_OK;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -147,6 +144,10 @@ public final class CallManager extends UntypedActor {
     private String myHostIp;
     private String proxyIp;
 
+    private final LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
+    private CreateCall createCallRequest;
+    private SwitchProxy switchProxyRequest;
+
     //Control whether Restcomm will patch Request-URI and SDP for B2BUA calls
     private boolean patchForNatB2BUASessions;
 
@@ -174,10 +175,6 @@ public final class CallManager extends UntypedActor {
         }
 
     }
-
-    private final LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
-    private CreateCall createCallRequest;
-    private SwitchProxy switchProxyRequest;
 
     public CallManager(final Configuration configuration, final ServletContext context, final ActorSystem system,
                        final MediaServerControllerFactory msControllerFactory, final ActorRef conferences, final ActorRef bridges,
@@ -253,7 +250,7 @@ public final class CallManager extends UntypedActor {
 
             @Override
             public UntypedActor create() throws Exception {
-                return new Call(sipFactory, msControllerFactory.provideCallController());
+                return new Call(sipFactory, msControllerFactory.provideCallController(), configuration);
             }
         }));
     }
@@ -369,7 +366,13 @@ public final class CallManager extends UntypedActor {
                 // This call is not a registered DID (application). Try to proxy out this call.
                 // log to console and to notification engine
                 String errMsg = "A Restcomm Client is trying to call a Number/DID that is not registered with Restcomm";
-                sendNotification(errMsg, 11002, "warning", true);
+                sendNotification(errMsg, 11002, "info", true);
+
+                if (isWebRTC(request)) {
+                    //This is a WebRTC client that dials out
+                    proxyThroughMediaServer(request, client, toUser);
+                    return;
+                }
 
                 // https://telestax.atlassian.net/browse/RESTCOMM-335
                 final String proxyURI = activeProxy;
@@ -447,6 +450,41 @@ public final class CallManager extends UntypedActor {
                 + "cannot be found or there is application attached to that";
         sendNotification(errMsg, 11005, "error", true);
 
+    }
+
+    private boolean isWebRTC(final SipServletRequest request) {
+        String transport = request.getTransport();
+        String userAgent = request.getHeader(UserAgent.NAME);
+        //The check for request.getHeader(UserAgentHeader.NAME).equals("sipunit") has been added in order to be able to test this feature with sipunit at the Restcomm testsuite
+        if (userAgent != null && !userAgent.isEmpty() && userAgent.equalsIgnoreCase("wss-sipunit")) {
+            return true;
+        }
+        if (!request.getInitialTransport().equalsIgnoreCase(transport))
+            transport = request.getInitialTransport();
+        return "ws".equalsIgnoreCase(transport) || "wss".equalsIgnoreCase(transport);
+    }
+
+    private void proxyThroughMediaServer(final SipServletRequest request, final Client client, final String destNumber) {
+        String rcml = "<Response><Dial>"+destNumber+"</Dial></Response>";
+        final VoiceInterpreterBuilder builder = new VoiceInterpreterBuilder(system);
+        builder.setConfiguration(configuration);
+        builder.setStorage(storage);
+        builder.setCallManager(self());
+        builder.setConferenceManager(conferences);
+        builder.setBridgeManager(bridges);
+        builder.setSmsService(sms);
+        builder.setAccount(client.getAccountSid());
+        builder.setVersion(client.getApiVersion());
+        final Account account = storage.getAccountsDao().getAccount(client.getAccountSid());
+        builder.setEmailAddress(account.getEmailAddress());
+        builder.setRcml(rcml);
+        builder.setMonitoring(monitoring);
+        final ActorRef interpreter = builder.build();
+        final ActorRef call = call();
+        final SipApplicationSession application = request.getApplicationSession();
+        application.setAttribute(Call.class.getName(), call);
+        call.tell(request, self());
+        interpreter.tell(new StartInterpreter(call), self());
     }
 
     private void info(final SipServletRequest request) throws IOException {
@@ -935,20 +973,24 @@ public final class CallManager extends UntypedActor {
 
         List<Registration> registrations = registrationsDao.getRegistrations(client);
         if (registrations != null && registrations.size() > 0) {
+            if (logger.isInfoEnabled()) {
+                logger.info("Preparing call for client: "+client+". There are "+registrations.size()+" registrations at the database for this client");
+            }
             for (Registration registration : registrations) {
                 if (registration.isWebRTC()) {
+                    //If this is a WebRTC client registration, check that the InstanceId of the registration is for the current Restcomm instance
                     if ((registration.getInstanceId() != null && !registration.getInstanceId().equals(RestcommConfiguration.getInstance().getMain().getInstanceId()))) {
-                        Registration webRtcRegistration = registrationsDao.getRegistrationByInstanceId(client, RestcommConfiguration.getInstance().getMain().getInstanceId());
-                        if (webRtcRegistration == null) {
-                            logger.warning("Cannot create call for user agent: " + registration.getLocation() + " since this is a webrtc client registered in another Restcomm instance.");
-                            break;
-                        } else {
-                            registrationToDial.add(webRtcRegistration);
-                            break;
-                        }
+                        logger.warning("Cannot create call for user agent: " + registration.getLocation() + " since this is a webrtc client registered in another Restcomm instance.");
+                    } else {
+                        if (logger.isInfoEnabled())
+                            logger.info("Will add WebRTC registration: "+registration.getLocation()+" to the list to be dialed for client: "+client);
+                        registrationToDial.add(registration);
                     }
+                } else {
+                    if (logger.isInfoEnabled())
+                        logger.info("Will add registration: "+registration.getLocation()+" to the list to be dialed for client: "+client);
+                    registrationToDial.add(registration);
                 }
-                registrationToDial.add(registration);
             }
         } else {
             String errMsg = "The SIP Client "+request.to()+" is not registered or does not exist";
@@ -959,21 +1001,40 @@ public final class CallManager extends UntypedActor {
         }
 
         if (registrationToDial.size() > 0) {
+            if (logger.isInfoEnabled()) {
+                if (registrationToDial.size()>1) {
+                    logger.info("Preparing call for client: "+client+", after WebRTC check, Restcomm have to dial :"+registrationToDial.size()+" registrations");
+                }
+            }
             List<ActorRef> calls = new CopyOnWriteArrayList<>();
             for (Registration registration : registrationToDial) {
-                logger.info("Will proceed to create call for client: " + registration.getLocation() + " registration instanceId: " + registration.getInstanceId() + " own InstanceId: " + RestcommConfiguration.getInstance().getMain().getInstanceId());
+                if (logger.isInfoEnabled())
+                    logger.info("Will proceed to create call for client: " + registration.getLocation() + " registration instanceId: " + registration.getInstanceId() + " own InstanceId: " + RestcommConfiguration.getInstance().getMain().getInstanceId());
+                String transport;
                 if (registration.getLocation().contains("transport")) {
-                    String transport = registration.getLocation().split(";")[1].replace("transport=", "");
+                    transport = registration.getLocation().split(";")[1].replace("transport=", "");
                     outboundIntf = outboundInterface(transport);
                 } else {
-                    outboundIntf = outboundInterface("udp");
+                    transport = "udp";
+                    outboundIntf = outboundInterface(transport);
+                }
+                if (outboundIntf == null) {
+                    String errMsg = "The outbound interface for transport: "+transport+" is NULL, something is wrong with container, cannot proceed to call client "+request.to();
+                    logger.error(errMsg);
+                    sendNotification(errMsg, 11008, "error", true);
+                    sender.tell(new CallManagerResponse<ActorRef>(new NullPointerException(errMsg), this.createCallRequest), self());
+                    return;
                 }
                 if (request.from() != null && request.from().contains("@")) {
                     // https://github.com/Mobicents/RestComm/issues/150 if it contains @ it means this is a sip uri and we allow
                     // to use it directly
                     from = (SipURI) sipFactory.createURI(request.from());
                 } else if (request.from() != null) {
-                    from = sipFactory.createSipURI(request.from(), mediaExternalIp + ":" + outboundIntf.getPort());
+                    if (outboundIntf != null) {
+                        from = sipFactory.createSipURI(request.from(), mediaExternalIp + ":" + outboundIntf.getPort());
+                    } else {
+                        logger.error("Outbound interface is null, cannot create From header to be used to Dial client: "+client);
+                    }
                 } else {
                     from = outboundIntf;
                 }

@@ -1,4 +1,4 @@
-App.controller('projectManagerCtrl', function ( $scope, $http, $location, $stateParams, $timeout, $upload, notifications, authentication) {
+App.controller('projectManagerCtrl', function ( $scope, $http, $location, $stateParams, $timeout, $upload, notifications, authentication, fileRetriever ) {
 
 	var account = authentication.getAccount();
 
@@ -128,7 +128,7 @@ App.controller('projectManagerCtrl', function ( $scope, $http, $location, $state
 	        url: 'services/projects',
 	        file: file,
 	      }).progress(function(evt) {
-	        console.log('percent: ' + parseInt(100.0 * evt.loaded / evt.total));
+	        //console.log('percent: ' + parseInt(100.0 * evt.loaded / evt.total));
 	      }).success(function(data, status, headers, config) {
 	    	  console.log('Project imported successfully');
 	    	  $scope.refreshProjectList();
@@ -144,6 +144,13 @@ App.controller('projectManagerCtrl', function ( $scope, $http, $location, $state
 	      });
 	    }
 	};
+
+	$scope.download = function (applicationSid,projectName) {
+	    var downloadUrl =  '/restcomm-rvd/services/projects/' + applicationSid + '/archive?projectName=' + projectName;
+	    fileRetriever.download(downloadUrl, projectName + ".zip").catch(function () {
+	        notifications.put({type:"danger", message:"Error downloading project archive"});
+	    });
+	}
 	
     $scope.refreshProjectList();	
 	

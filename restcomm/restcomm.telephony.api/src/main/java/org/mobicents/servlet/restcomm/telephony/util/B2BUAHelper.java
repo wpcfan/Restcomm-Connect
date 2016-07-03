@@ -102,6 +102,7 @@
          final Registration registration = registrations.getRegistrationByAoR(user, toHost);
          if (registration != null) {
              final String location = registration.getLocation();
+             final String aor = registration.getAddressOfRecord();
              SipURI to;
              SipURI from;
              try {
@@ -112,7 +113,7 @@
                  // create and send the outgoing invite and do the session linking
                  incomingSession.setAttribute(B2BUA_LAST_REQUEST, request);
                  SipServletRequest outRequest = sipFactory.createRequest(request.getApplicationSession(), request.getMethod(),
-                         request.getFrom().getURI(), request.getTo().getURI());
+                         from, to);
                  outRequest.setRequestURI(to);
 
                  if (request.getContent() != null) {
@@ -467,7 +468,7 @@
          }
          CallDetailRecord callRecord = records.getCallDetailRecord((Sid) linkedRequest.getSession().getAttribute(CDR_SID));
 
-         if (response.getContent() != null) {
+         if (response.getRawContent() != null && response.getRawContent().length > 0 ) {
              final byte[] sdp = response.getRawContent();
              String offer = null;
              if (response.getContentType().equalsIgnoreCase("application/sdp") && patchForNat) {

@@ -62,6 +62,7 @@ public final class AccountConverter extends AbstractConverter implements JsonSer
         writeFriendlyName(account.getFriendlyName(), writer);
         writeEmailAddress(account, writer);
         writeStatus(account.getStatus().toString(), writer);
+        writeRoleInfo(account.getRole(), writer);
         writeType(account.getType().toString(), writer);
         writeDateCreated(account.getDateCreated(), writer);
         writeDateUpdated(account.getDateUpdated(), writer);
@@ -80,6 +81,7 @@ public final class AccountConverter extends AbstractConverter implements JsonSer
         writeEmailAddress(account, object);
         writeType(account.getType().toString(), object);
         writeStatus(account.getStatus().toString(), object);
+        writeRoleInfo(account.getRole(), object);
         writeDateCreated(account.getDateCreated(), object);
         writeDateUpdated(account.getDateUpdated(), object);
         writeAuthToken(account, object);
@@ -238,11 +240,23 @@ public final class AccountConverter extends AbstractConverter implements JsonSer
     private void writeEmailAddress(final Account account, final HierarchicalStreamWriter writer) {
         writer.startNode("EmailAddress");
         writer.setValue(account.getEmailAddress());
+        writer.endNode();
         writer.close();
     }
 
     private void writeEmailAddress(final Account account, final JsonObject object) {
         object.addProperty("email_address", account.getEmailAddress());
+    }
+
+    private void writeRoleInfo(final String role, final HierarchicalStreamWriter writer) {
+        writer.startNode("Role");
+        writer.setValue(role);
+        writer.endNode();
+        writer.close();
+    }
+
+    private void writeRoleInfo(final String role, final JsonObject object) {
+        object.addProperty("role", role);
     }
 
     private void writeOrganizationSid(final Account account, final HierarchicalStreamWriter writer) {
@@ -260,4 +274,5 @@ public final class AccountConverter extends AbstractConverter implements JsonSer
             object.add("organization_sid", JsonNull.INSTANCE);
         }
     }
+
 }

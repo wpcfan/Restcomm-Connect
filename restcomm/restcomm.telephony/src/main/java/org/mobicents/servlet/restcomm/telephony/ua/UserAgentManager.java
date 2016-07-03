@@ -96,6 +96,47 @@ public final class UserAgentManager extends UntypedActor {
         this.storage = storage;
         pingInterval = runtime.getInt("ping-interval", 60);
         getContext().setReceiveTimeout(Duration.create(pingInterval, TimeUnit.SECONDS));
+        logger.info("About to run firstTimeCleanup()");
+        firstTimeCleanup();
+    }
+
+    private void firstTimeCleanup() {
+        if (logger.isInfoEnabled())
+            logger.info("Initial registration cleanup. Will check existing registrations in DB and cleanup appropriately");
+        final RegistrationsDao registrations = storage.getRegistrationsDao();
+        List<Registration> results = registrations.getRegistrations();
+        for (final Registration result : results) {
+            if (result.isWebRTC()) {
+                //If this is a WebRTC registration remove it since after restart the websocket connection is gone
+                if (logger.isInfoEnabled())
+                    logger.info("Will remove WebRTC client: "+result.getLocation());
+                registrations.removeRegistration(result);
+                monitoringService.tell(new UserRegistration(result.getUserName(), result.getLocation(), false), self());
+            } else {
+                final DateTime expires = result.getDateExpires();
+                if (expires.isBeforeNow() || expires.isEqualNow()) {
+                    if (logger.isInfoEnabled()) {
+                        logger.info("Registration: " + result.getLocation() + " expired and will be removed now");
+                    }
+                    registrations.removeRegistration(result);
+                    monitoringService.tell(new UserRegistration(result.getUserName(), result.getLocation(), false), self());
+                    return;
+                }
+                final DateTime updated = result.getDateUpdated();
+                Long pingIntervalMillis = new Long(pingInterval * 1000 * 3);
+                if ((DateTime.now().getMillis() - updated.getMillis()) > pingIntervalMillis) {
+                    //Last time this registration updated was older than (pingInterval * 3), looks like it doesn't respond to OPTIONS
+                    if (logger.isInfoEnabled()) {
+                        logger.info("Registration: " + result.getLocation() + " didn't respond to OPTIONS and will be removed now");
+                    }
+                    registrations.removeRegistration(result);
+                    monitoringService.tell(new UserRegistration(result.getUserName(), result.getLocation(), false), self());
+                }
+            }
+        }
+        results = registrations.getRegistrations();
+        if (logger.isInfoEnabled())
+            logger.info("Initial registration cleanup finished, starting Restcomm with "+results.size()+" registrations");
     }
 
     private void clean() {
@@ -341,7 +382,11 @@ public final class UserAgentManager extends UntypedActor {
         final SipURI uri = (SipURI) contact.getURI();
         final String ip = request.getInitialRemoteAddr();
         final int port = request.getInitialRemotePort();
-        final String transport = (uri.getTransportParam()==null?request.getParameter("transport"):uri.getTransportParam()); //Issue #935, take transport of initial request-uri if contact-uri has no transport parameter
+        String transport = (uri.getTransportParam()==null?request.getParameter("transport"):uri.getTransportParam()); //Issue #935, take transport of initial request-uri if contact-uri has no transport parameter
+        if (transport == null && !request.getInitialTransport().equalsIgnoreCase("udp")) {
+            //Issue1068, if Contact header or RURI doesn't specify transport, check InitialTransport from
+            transport = request.getInitialTransport();
+        }
         //Issue 306: https://telestax.atlassian.net/browse/RESTCOMM-306
         final String initialIpBeforeLB = request.getHeader("X-Sip-Balancer-InitialRemoteAddr");
         final String initialPortBeforeLB = request.getHeader("X-Sip-Balancer-InitialRemotePort");
@@ -414,11 +459,28 @@ public final class UserAgentManager extends UntypedActor {
         // if(request.getSession().isValid()) {
         // request.getSession().invalidate();
         // }
-        if (request.getApplicationSession().isValid()) {
-            try {
-                request.getApplicationSession().invalidate();
-            } catch (IllegalStateException exception) {
+        try {
+            if (request != null) {
+                if (request.getApplicationSession() != null) {
+                    if (request.getApplicationSession().isValid()) {
+                        try {
+                            request.getApplicationSession().setInvalidateWhenReady(true);
+                        } catch (IllegalStateException exception) {
+                            logger.error("Exception while trying to setInvalidateWhenReady(true) for application session, exception: "+exception);
+                        }
+                    }
+                } else {
+                    if (logger.isInfoEnabled()) {
+                        logger.info("After sent response: "+response.toString()+" for Register request, application session is NULL!");
+                    }
+                }
+            } else {
+                if (logger.isInfoEnabled()) {
+                    logger.info("After sent response: "+response.toString()+" for Register request, request is NULL!");
+                }
             }
+        } catch (Exception e) {
+            logger.error("Exception while trying to setInvalidateWhenReady(true) after sent response to register : "+response.toString()+" exception: "+e);
         }
     }
 

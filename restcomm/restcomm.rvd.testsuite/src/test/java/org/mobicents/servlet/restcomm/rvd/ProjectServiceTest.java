@@ -47,7 +47,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
  * @author orestis.tsakiridis@telestax.com - Orestis Tsakiridis
  */
 @RunWith(Arquillian.class)
-public class ProjectServiceTest {
+public class ProjectServiceTest extends RvdTest {
 
     private final static Logger logger = Logger.getLogger(ProjectServiceTest.class);
     private static final String version = org.mobicents.servlet.restcomm.Version.getVersion();
@@ -57,10 +57,7 @@ public class ProjectServiceTest {
     private String accountSid = "ACae6e420f425248d6a26948c17a9e2acf";
     private String accountAuthToken = "77f8c12cc7b8f8423e5c38b035249166";
 
-    @ArquillianResource
-    private Deployer deployer;
-    @ArquillianResource
-    URL deploymentUrl;
+    private String removedProjectSid = "AP81cf45088cba4abcac1261385916d582";
 
     @Before
     public void before() {
@@ -91,11 +88,11 @@ public class ProjectServiceTest {
         String json = response.getEntity(String.class);
         JsonParser parser = new JsonParser();
         JsonArray array = parser.parse(json).getAsJsonArray();
-        Assert.assertTrue("Invalid number of project returned", array.size() >= 3);
+        Assert.assertTrue("Invalid number of project returned", array.size() >= 2); // takes into account projects that have been created/deleted meanwhile
     }
 
     @Test
-    public void createProject() {
+    public void canCreateProject() {
         // create application stub
         stubFor(post(urlMatching("/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/Applications.json"))
                 .willReturn(aResponse()
@@ -128,41 +125,20 @@ public class ProjectServiceTest {
         Assert.assertEquals("Invalid project kind", "voice", object.get("kind").getAsString());
     }
 
-    /*
     @Test
     public void canDeleteProjects() {
+        stubFor(delete(urlMatching("/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/Applications/"+removedProjectSid+".json"))
+                .willReturn(aResponse()
+                        .withStatus(200)));
+
         Client jersey = getClient(username, password);
-        WebResource resource = jersey.resource( getResourceUrl("/services/projects/newapplication?kind=voice") );
-        ClientResponse response = resource.put(ClientResponse.class);
-        Assert.assertEquals(200, response.getStatus());
-
-        DELETE /restcomm-rvd/services/projects/AP9c1464152be74baeb20c964ef5844dcc
-
-    }
-    */
-
-    protected Client getClient(String username, String password) {
-        Client jersey = Client.create();
-        jersey.addFilter(new HTTPBasicAuthFilter(username, password));
-        return jersey;
-    }
-
-    protected String getResourceUrl(String suffix) {
-        String urlString = deploymentUrl.toString();
-        if ( urlString.endsWith("/") )
-            urlString = urlString.substring(0,urlString.length()-1);
-
-        if ( suffix != null && !suffix.isEmpty()) {
-            if (!suffix.startsWith("/"))
-                suffix = "/" + suffix;
-            return urlString + suffix;
-        } else
-            return urlString;
-
+        WebResource resource = jersey.resource( getResourceUrl("/services/projects/" + removedProjectSid) );
+        ClientResponse response = resource.delete(ClientResponse.class);
+        Assert.assertEquals("Error removing project " + removedProjectSid,200, response.getStatus());
     }
 
     @Deployment(name = "ProjectServiceTest", managed = true, testable = false)
-    public static WebArchive createWebArchiveNoGw() {
+    public static WebArchive createWebArchive() {
         logger.info("Packaging Test App");
         logger.info("version");
         WebArchive archive = ShrinkWrap.create(WebArchive.class, "restcomm-rvd.war");

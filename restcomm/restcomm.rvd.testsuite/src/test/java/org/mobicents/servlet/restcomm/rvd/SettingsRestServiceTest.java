@@ -26,16 +26,10 @@ import com.google.gson.JsonParser;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.DirectoryFileFilter;
-import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.log4j.Logger;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.arquillian.test.api.ArquillianResource;
-import org.jboss.shrinkwrap.api.ArchivePath;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.asset.Asset;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.jboss.shrinkwrap.resolver.api.maven.archive.ShrinkWrapMaven;
 import org.junit.Assert;
@@ -43,17 +37,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.File;
-import java.net.URL;
-import java.util.Collection;
-
 /**
  * @author orestis.tsakriridis@telestax.com - Orestis Tsakiridis
  */
 @RunWith(Arquillian.class)
-public class SettingsTest extends RvdTest {
+public class SettingsRestServiceTest extends RvdTest {
 
-    private final static Logger logger = Logger.getLogger(SettingsTest.class);
+    private final static Logger logger = Logger.getLogger(SettingsRestServiceTest.class);
     private static final String version = org.mobicents.servlet.restcomm.Version.getVersion();
 
     static final String username = "administrator@company.com";
@@ -85,7 +75,7 @@ public class SettingsTest extends RvdTest {
         Assert.assertEquals("Invalid settings apiServerPass", "topsecret", object.get("apiServerPass").getAsString());
     }
 
-    @Deployment(name = "SettingsTest", managed = true, testable = false)
+    @Deployment(name = "SettingsRestServiceTest", managed = true, testable = false)
     public static WebArchive createWebArchive() {
         logger.info("Packaging Test App");
         logger.info("version");

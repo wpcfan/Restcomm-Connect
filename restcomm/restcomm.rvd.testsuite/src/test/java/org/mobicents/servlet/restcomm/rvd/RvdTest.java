@@ -20,18 +20,24 @@
 
 package org.mobicents.servlet.restcomm.rvd;
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
+import org.jboss.arquillian.container.test.api.Deployer;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Before;
+import org.junit.Rule;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Random;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
@@ -41,7 +47,15 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 public class RvdTest {
 
     @ArquillianResource
+    private Deployer deployer;
+    @ArquillianResource
     URL deploymentUrl;
+
+    static final String username = "administrator@company.com";
+    static final String password = "adminpass";
+
+    @Rule
+    public WireMockRule wireMockRule = new WireMockRule(8089);
 
     @Before
     public void before() {
@@ -96,6 +110,47 @@ public class RvdTest {
             archive.addAsWebResource(file, destination + relativePath);
         }
         System.out.println(archive.toString(true));
+    }
+
+    /**
+     * Clones (makes a recursive copy of) a workspace from sourceDir into a random temporary
+     * directory.
+     *
+     * @param sourceDir
+     * @return the temporary workspace directory created
+     */
+    public static File cloneWorkspace(File sourceDir) throws IOException {
+        String tempDirLocation = System.getProperty("java.io.tmpdir");
+        Random ran = new Random();
+        String workspaceLocation = tempDirLocation + "/workspace_projectTest" + ran.nextInt(10000);
+        File workspaceDir = new File(workspaceLocation);
+        FileUtils.copyDirectory(sourceDir,workspaceDir);
+        //workspaceDir.mkdir();
+
+        return workspaceDir;
+    }
+
+    public static void removeTempWorkspace(String workspaceLocation) {
+        File workspaceDir = new File(workspaceLocation);
+        FileUtils.deleteQuietly(workspaceDir);
+    }
+
+    /**
+     * Applies boilerplate search-n-replace operation to an rvd.xml resource. It will replace <workspace/> element
+     * to the one specified in workspaceLocation. It returns the customized rvd.xml as a string.
+     *
+     * Example:
+     *  String newrvdxml = customizeRvdXMLForWorkspaceLocation("/rvd.xml", "/tmp/my-custom-workspace");
+     *
+     * @param rvdxmlResource
+     * @param workspaceLocation
+     * @return
+     * @throws IOException
+     */
+    public static String customizeRvdXMLForWorkspaceLocation(String rvdxmlResource, String workspaceLocation ) throws IOException {
+        String rvdxml = FileUtils.readFileToString(new File(ProjectRestServiceTest.class.getResource(rvdxmlResource).getFile()), Charset.forName("UTF8"));
+        System.out.println("rvd.xml: " + rvdxml);
+        return rvdxml.replace("<workspaceLocation>workspace</workspaceLocation>","<workspaceLocation>"+workspaceLocation+"</workspaceLocation>");
     }
 
 }

@@ -46,10 +46,6 @@ public class SettingsRestServiceTest extends RvdTest {
     private final static Logger logger = Logger.getLogger(SettingsRestServiceTest.class);
     private static final String version = org.mobicents.servlet.restcomm.Version.getVersion();
 
-    static final String username = "administrator@company.com";
-    static final String password = "adminpass";
-
-
     @Rule
     public WireMockRule wireMockRule = new WireMockRule(8089);
 

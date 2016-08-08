@@ -54,8 +54,6 @@ public class ProjectRestServiceTest extends RvdTest {
     private final static Logger logger = Logger.getLogger(ProjectRestServiceTest.class);
     private static final String version = org.mobicents.servlet.restcomm.Version.getVersion();
 
-    static final String username = "administrator@company.com";
-    static final String password = "adminpass";
     private String accountSid = "ACae6e420f425248d6a26948c17a9e2acf";
     private String accountAuthToken = "77f8c12cc7b8f8423e5c38b035249166";
 
@@ -86,9 +84,6 @@ public class ProjectRestServiceTest extends RvdTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"sid\":\"ACae6e420f425248d6a26948c17a9e2acf\",\"email_address\":\"administrator@company.com\",\"status\":\"active\",\"role\":\"administrator\"}")));
     }
-
-    @Rule
-    public WireMockRule wireMockRule = new WireMockRule(8089);
 
     @Test
     public void canRetrieveProjects() {
@@ -157,30 +152,6 @@ public class ProjectRestServiceTest extends RvdTest {
         String removedProjectPath = workspaceLocation + "/" + removedProjectSid;
         Assert.assertFalse("Removed project directory still exists: " + removedProjectPath, new File(removedProjectPath).exists());
 
-    }
-
-
-    /**
-     * Clones (makes a recursive copy of) a workspace from sourceDir into a random temporary
-     * directory.
-     *
-     * @param sourceDir
-     * @return the temporary workspace directory created
-     */
-    public static File cloneWorkspace(File sourceDir) throws IOException {
-        String tempDirLocation = System.getProperty("java.io.tmpdir");
-        Random ran = new Random();
-        String workspaceLocation = tempDirLocation + "/workspace_projectTest" + ran.nextInt(10000);
-        File workspaceDir = new File(workspaceLocation);
-        FileUtils.copyDirectory(sourceDir,workspaceDir);
-        //workspaceDir.mkdir();
-
-        return workspaceDir;
-    }
-
-    public static void removeTempWorkspace(String workspaceLocation) {
-        File workspaceDir = new File(workspaceLocation);
-        FileUtils.deleteQuietly(workspaceDir);
     }
 
     @Deployment(name = "ProjectRestServiceTest", managed = true, testable = false)

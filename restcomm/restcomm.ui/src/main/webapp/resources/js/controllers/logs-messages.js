@@ -2,7 +2,7 @@
 
 var rcMod = angular.module('rcApp');
 
-rcMod.controller('LogsMessagesCtrl', function ($scope, $resource, $timeout, $modal, SessionService, RCommLogsMessages) {
+rcMod.controller('LogsMessagesCtrl', function ($scope, $resource, $timeout, $uibModal, SessionService, RCommLogsMessages) {
 
   $scope.Math = window.Math;
 
@@ -34,7 +34,7 @@ rcMod.controller('LogsMessagesCtrl', function ($scope, $resource, $timeout, $mod
 
   // Modal : Message Details
   $scope.showMessageDetailsModal = function (message) {
-    $modal.open({
+    $uibModal.open({
       controller: 'LogsMessagesDetailsCtrl',
       scope: $scope,
       templateUrl: 'modules/modals/modal-logs-messages.html',
@@ -71,12 +71,12 @@ $scope.sortBy = function(field) {
 
 });
 
-rcMod.controller('LogsMessagesDetailsCtrl', function($scope, $stateParams, $resource, $modalInstance, SessionService, RCommLogsMessages, messageSid) {
+rcMod.controller('LogsMessagesDetailsCtrl', function($scope, $stateParams, $resource, $uibModalInstance, SessionService, RCommLogsMessages, messageSid) {
   $scope.sid = SessionService.get("sid");
   $scope.messageSid = $stateParams.messageSid || messageSid;
 
   $scope.closeMessageDetails = function () {
-    $modalInstance.dismiss('cancel');
+    $uibModalInstance.dismiss('cancel');
   };
 
   $scope.messageDetails = RCommLogsMessages.view({accountSid: $scope.sid, smsMessageSid: $scope.messageSid});

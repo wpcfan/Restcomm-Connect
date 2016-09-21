@@ -82,9 +82,10 @@ rcMod.controller('ClientDetailsCtrl', function ($scope, $stateParams, $location,
     var params = {};
 
     // Mandatory fields
-    if(client.login && client.password) {
+    var effectivePassword = ($scope.editingPass && client.newPassword) ? client.newPassword : client.password;
+    if(client.login && effectivePassword) {
       params["Login"] = client.login;
-      params["Password"] = client.password;
+      params["Password"] = effectivePassword;
     }
     else {
       alert("You must provide Login and Password.");
@@ -149,6 +150,12 @@ rcMod.controller('ClientDetailsCtrl', function ($scope, $stateParams, $location,
 
   $scope.confirmClientDelete = function(client) {
     confirmClientDelete(client, $dialog, $scope, Notifications, RCommClients, $location);
+  }
+
+  $scope.togglePasswordEdit = function () {
+    $scope.editingPass = !$scope.editingPass;
+    if (!$scope.editingPass)
+      $scope.clientDetails.newPassword = "";
   }
 });
 

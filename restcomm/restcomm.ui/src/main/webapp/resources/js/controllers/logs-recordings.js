@@ -21,9 +21,11 @@ rcMod.controller('LogsRecordingsCtrl', function($scope, $resource, $timeout, $ui
     $scope.noOfPages = Math.ceil($scope.filtered.length / $scope.entryLimit);
   };
 
+/*
   $scope.setPage = function(pageNo) {
     $scope.currentPage = pageNo;
   };
+  */
 
   $scope.filter = function() {
     $timeout(function() { //wait for 'filtered' to be changed

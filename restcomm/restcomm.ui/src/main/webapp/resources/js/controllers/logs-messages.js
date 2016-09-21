@@ -21,9 +21,11 @@ rcMod.controller('LogsMessagesCtrl', function ($scope, $resource, $timeout, $uib
     $scope.noOfPages = Math.ceil($scope.filtered.length / $scope.entryLimit);
   };
 
+/*
   $scope.setPage = function(pageNo) {
     $scope.currentPage = pageNo;
   };
+  */
 
   $scope.filter = function() {
     $timeout(function() { //wait for 'filtered' to be changed
@@ -71,12 +73,12 @@ $scope.sortBy = function(field) {
 
 });
 
-rcMod.controller('LogsMessagesDetailsCtrl', function($scope, $stateParams, $resource, $uibModalInstance, SessionService, RCommLogsMessages, messageSid) {
+rcMod.controller('LogsMessagesDetailsCtrl', function($scope, $stateParams, $resource, $uibMmodalInstance, SessionService, RCommLogsMessages, messageSid) {
   $scope.sid = SessionService.get("sid");
   $scope.messageSid = $stateParams.messageSid || messageSid;
 
   $scope.closeMessageDetails = function () {
-    $uibModalInstance.dismiss('cancel');
+    $modalInstance.dismiss('cancel');
   };
 
   $scope.messageDetails = RCommLogsMessages.view({accountSid: $scope.sid, smsMessageSid: $scope.messageSid});

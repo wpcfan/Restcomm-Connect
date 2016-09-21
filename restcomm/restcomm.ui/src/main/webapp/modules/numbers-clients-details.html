@@ -48,7 +48,9 @@
                 </div>
                 <div class="form-group" style="position:relative">
                     <span>
-                        <span ng-show="editingPass" class="password-strength" ng-password-strength="clientDetails.newPassword" style="padding: inherit;"></span>
+                        <div ng-show="editingPass" class="password-strength" ng-password-strength="clientDetails.newPassword" strength="pwdStrength" css-mode="bootstrap" inner-class="progress-bar" inner-class-prefix="progress-bar-" style="padding: inherit;">
+                            <uib-progressbar value="pwdStrength"></uib-progressbar>
+                        </div>
                         <!-- un-comment this to use input-group for more control for the password field -->
                         <span class="input-group" style="width:220px;">
                             <input ng-if="editingPass" id="client-password" type="password" class="form-control" placeholder="Change password" ng-model="clientDetails.newPassword" ng-class="{'password-transparent' : clientDetails.newPassword}" />

@@ -21,7 +21,10 @@
             </dd>
             <dt>Password</dt>
             <dd id="client-password-wrap">
-                <span class="password-strength" ng-password-strength="clientDetails.password" style="padding: inherit;"></span>
+                <div class="password-strength" ng-password-strength="clientDetails.password" strength="pwdStrength" css-mode="bootstrap" inner-class="progress-bar" inner-class-prefix="progress-bar-" style="padding: inherit;">
+                    <uib-progressbar value="pwdStrength"></uib-progressbar>
+                </div>
+
                 <input id="new-client-password" class="form-control" ng-model="clientDetails.password" type="password" placeholder="Password" ng-class="{'password-transparent' : clientDetails.password}" required />
             </dd>
             <!-- TODO: Implement password verification

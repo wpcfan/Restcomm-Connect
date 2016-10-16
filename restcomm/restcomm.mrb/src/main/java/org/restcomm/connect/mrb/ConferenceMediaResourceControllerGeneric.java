@@ -101,7 +101,6 @@ public class ConferenceMediaResourceControllerGeneric extends UntypedActor{
 
     // Observer pattern
     private final List<ActorRef> observers;
-    private final ActorRef mrb;
 
     public ConferenceMediaResourceControllerGeneric(final String localMsId, ActorRef localMediaGateway, final Configuration configuration, final DaoManager storage, final ActorRef mrb){
     //public ConferenceMediaResourceController(final String localMsId, final Map<String, ActorRef> gateways, final Configuration configuration, final DaoManager storage){
@@ -132,7 +131,6 @@ public class ConferenceMediaResourceControllerGeneric extends UntypedActor{
 
         this.storage = storage;
         this.configuration = configuration;
-        logger.info("localMsId: "+localMsId);
         this.localMediaGateway = localMediaGateway;
         masterIVREndpointIdName = null;
 
@@ -140,8 +138,6 @@ public class ConferenceMediaResourceControllerGeneric extends UntypedActor{
         this.playing = Boolean.FALSE;
         this.recording = Boolean.FALSE;
         this.fail = Boolean.FALSE;
-
-        this.mrb = mrb;
 
         // Observers
         this.observers = new ArrayList<ActorRef>(1);

@@ -265,7 +265,6 @@ public final class MmsConferenceController extends MediaServerController {
             MediaGatewayForConference mgc = (MediaGatewayForConference) message.get();
             mediaGateway = mgc.mediaGateway();
             this.conferenceSid = mgc.conferenceSid();
-            this.conferenceEndpointIdName = mgc.masterConfernceEndpointIdName();
             fsm.transition(message, acquiringMediaSession);
         }else if(is(acquiringCnfMediaResourceController)){
             conferenceMediaResourceController = (ActorRef) message.get();

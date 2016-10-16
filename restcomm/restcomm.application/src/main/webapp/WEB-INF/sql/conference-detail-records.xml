@@ -5,7 +5,7 @@
 	namespace="org.mobicents.servlet.sip.restcomm.dao.ConferenceDetailRecordsDao">
 
     <insert id="addConferenceDetailRecord" parameterType="map">
-        call "addConferenceDetailRecord"( #{sid}, #{date_created}, #{date_updated}, #{account_sid}, #{status}, #{friendly_name}, #{api_version}, #{uri}, #{master_ms_id}, #{master_present} );
+		INSERT INTO "restcomm_conference_detail_records" ("sid", "date_created", "date_updated", "account_sid", "status", "friendly_name", "api_version", "uri", "master_ms_id", "master_present") VALUES (#{sid}, #{date_created}, #{date_updated}, #{account_sid}, #{status}, #{friendly_name}, #{api_version}, #{uri}, #{master_ms_id}, #{master_present});
     </insert>
 	<select id="getConferenceDetailRecord" parameterType="string" resultType="hashmap">
 		SELECT * FROM "restcomm_conference_detail_records" WHERE "sid"=#{sid};
@@ -36,10 +36,7 @@
 		<if test="dateUpdated != null">
 			AND "date_updated" &lt;= DATE_ADD(#{dateUpdated},INTERVAL 1 DAY) order by "date_created"
 		</if>
-		<if test="msId != null">
-			AND "ms_id" like #{ms_id}
-		</if>
-;
+		;
 	</select>
 	<select id="getConferenceDetailRecordByUsingFilters" parameterType="org.restcomm.connect.dao.entities.ConferenceDetailRecordFilter" resultType="hashmap">
 		SELECT * FROM "restcomm_conference_detail_records" AS "restcomm_conference_detail_records" WHERE "account_sid"=#{accountSid}
@@ -54,9 +51,6 @@
 		</if>
 		<if test="dateUpdated != null">
 			AND "date_updated" &lt;= DATE_ADD(#{dateUpdated},INTERVAL 1 DAY) order by "date_created"
-		</if>
-		<if test="msId != null">
-			AND "ms_id" like #{ms_id}
 		</if>
 
 		LIMIT #{limit} OFFSET #{offset};

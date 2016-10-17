@@ -252,7 +252,8 @@ public final class MmsConferenceController extends MediaServerController {
     }
 
     private void onJoinComplete(JoinComplete message, ActorRef self, ActorRef sender) {
-        logger.info("got JoinComplete in conference controller");
+    	if(logger.isInfoEnabled())
+    	    logger.info("got JoinComplete in conference controller");
         if(!firstJoinSent){
             firstJoinSent = true;
             conferenceMediaResourceController.tell(message, self);
@@ -467,7 +468,8 @@ public final class MmsConferenceController extends MediaServerController {
 
         @Override
         public void execute(final Object message) throws Exception {
-            logger.info("MMSConferenceController: GettingCnfMediaResourceController: conferenceName = "+conferenceName+" conferenceSid: "+conferenceSid+" cnfenpointID: "+cnfEndpoint);
+        	if(logger.isInfoEnabled())
+        	    logger.info("MMSConferenceController: GettingCnfMediaResourceController: conferenceName = "+conferenceName+" conferenceSid: "+conferenceSid+" cnfenpointID: "+cnfEndpoint);
             mrb.tell(new GetConferenceMediaResourceController(conferenceName), self());
         }
     }
@@ -556,7 +558,8 @@ public final class MmsConferenceController extends MediaServerController {
 
         @Override
         public void execute(final Object message) throws Exception {
-            logger.info("StoppingCMRC");
+        	if(logger.isInfoEnabled())
+        	    logger.info("StoppingCMRC");
             conferenceMediaResourceController.tell(new StopConferenceMediaResourceController(), super.source);
         }
     }
@@ -575,7 +578,8 @@ public final class MmsConferenceController extends MediaServerController {
                 // Destroy Bridge Endpoint and its connections
                 cnfEndpoint.tell(new DestroyEndpoint(), super.source);
             }else{
-                logger.info("CMRC have ask you not to destroy endpoint bcz master have left firt and other slaves are still connected to this conference endpoint");
+            	if(logger.isInfoEnabled())
+            	    logger.info("CMRC have ask you not to destroy endpoint bcz master have left firt and other slaves are still connected to this conference endpoint");
                 cnfEndpoint.tell(new StopObserving(self()), self());
                 context().stop(cnfEndpoint);
                 cnfEndpoint = null;

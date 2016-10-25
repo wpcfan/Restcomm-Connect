@@ -20,6 +20,37 @@
 
 package org.restcomm.connect.rvd.storage;
 
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.SuffixFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.log4j.Logger;
+import org.restcomm.connect.rvd.ProjectService;
+import org.restcomm.connect.rvd.RvdConfiguration;
+import org.restcomm.connect.rvd.RvdContext;
+import org.restcomm.connect.rvd.exceptions.project.ProjectException;
+import org.restcomm.connect.rvd.model.ProjectSettings;
+import org.restcomm.connect.rvd.model.RappItem;
+import org.restcomm.connect.rvd.model.client.Node;
+import org.restcomm.connect.rvd.model.client.ProjectState;
+import org.restcomm.connect.rvd.model.client.StateHeader;
+import org.restcomm.connect.rvd.model.client.Step;
+import org.restcomm.connect.rvd.model.client.WavItem;
+import org.restcomm.connect.rvd.model.packaging.Rapp;
+import org.restcomm.connect.rvd.model.server.ProjectOptions;
+import org.restcomm.connect.rvd.storage.exceptions.BadProjectHeader;
+import org.restcomm.connect.rvd.storage.exceptions.BadWorkspaceDirectoryStructure;
+import org.restcomm.connect.rvd.storage.exceptions.ProjectAlreadyExists;
+import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
+import org.restcomm.connect.rvd.storage.exceptions.StorageException;
+import org.restcomm.connect.rvd.storage.exceptions.WavItemDoesNotExist;
+import org.restcomm.connect.rvd.utils.Zipper;
+import org.restcomm.connect.rvd.utils.exceptions.ZipperException;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -33,39 +64,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.filefilter.SuffixFileFilter;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.apache.log4j.Logger;
-import org.restcomm.connect.rvd.ProjectService;
-import org.restcomm.connect.rvd.RvdConfiguration;
-import org.restcomm.connect.rvd.exceptions.project.ProjectException;
-import org.restcomm.connect.rvd.RvdContext;
-import org.restcomm.connect.rvd.model.client.Node;
-import org.restcomm.connect.rvd.model.client.ProjectState;
-import org.restcomm.connect.rvd.model.client.StateHeader;
-import org.restcomm.connect.rvd.model.client.WavItem;
-import org.restcomm.connect.rvd.storage.exceptions.BadProjectHeader;
-import org.restcomm.connect.rvd.storage.exceptions.BadWorkspaceDirectoryStructure;
-import org.restcomm.connect.rvd.storage.exceptions.ProjectAlreadyExists;
-import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
-import org.restcomm.connect.rvd.storage.exceptions.StorageException;
-import org.restcomm.connect.rvd.storage.exceptions.WavItemDoesNotExist;
-import org.restcomm.connect.rvd.utils.Zipper;
-import org.restcomm.connect.rvd.utils.exceptions.ZipperException;
-import org.restcomm.connect.rvd.model.client.Step;
-import org.restcomm.connect.rvd.model.packaging.Rapp;
-import org.restcomm.connect.rvd.model.server.ProjectOptions;
-
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-
-import org.restcomm.connect.rvd.model.ProjectSettings;
-import org.restcomm.connect.rvd.model.RappItem;
 
 /**
  * @author Orestis Tsakiridis
@@ -316,6 +314,21 @@ public class FsProjectStorage {
             FileUtils.deleteDirectory(projectDir);
         } catch (IOException e) {
             throw new StorageException("Error removing directory '" + projectName + "'", e);
+        }
+    }
+
+    /**
+     * Remove all files from /data sub-directory of a project. That's where the files that result from building a
+     * project are stored.
+     *
+     * @param projectName
+     * @param storage
+     */
+    public static void clearExecutableData(String projectName, WorkspaceStorage storage) {
+        File projectDataDir = new File(storage.rootPath +  File.separator + projectName + File.separator + "data");
+        Collection<File> contents = FileUtils.listFiles(projectDataDir, TrueFileFilter.TRUE, null );
+        for (File file: contents) {
+            FileUtils.deleteQuietly(file);
         }
     }
 

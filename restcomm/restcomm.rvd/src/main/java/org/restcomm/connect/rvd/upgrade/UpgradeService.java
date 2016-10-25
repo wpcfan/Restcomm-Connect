@@ -26,8 +26,8 @@ public class UpgradeService {
         UPGRADABLE, NOT_NEEDED, NOT_SUPPORTED
     }
 
-    static final String[] versionPath = new String[] {"rvd714","1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"};
-    static final List<String> upgradesPath = Arrays.asList(new String [] {"1.0","1.6"});
+    static final String[] versionPath = new String[] {"rvd714","1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"};
+    static final List<String> upgradesPath = Arrays.asList(new String [] {"1.0","1.6", "1.7"});
 
     private WorkspaceStorage workspaceStorage;
 
@@ -43,6 +43,11 @@ public class UpgradeService {
      * @throws InvalidProjectVersion
      */
     public static boolean checkBackwardCompatible(String checkedProjectVesion, String referenceProjectVersion) throws InvalidProjectVersion {
+        if ( "1.7".equals(referenceProjectVersion)) {
+            if ( "1.7".equals(checkedProjectVesion) )
+                return true;
+            return false;
+        } else
         if ( "1.6".equals(referenceProjectVersion)) {
             if ( "1.6".equals(checkedProjectVesion) )
                 return true;

@@ -43,6 +43,9 @@ public class BuildService {
      * @throws StorageException
      */
     public void buildProject(String projectName, ProjectState projectState) throws StorageException {
+        // clear previous built files
+        FsProjectStorage.clearExecutableData(projectName, workspaceStorage);
+
         ProjectOptions projectOptions = new ProjectOptions();
 
         // Save general purpose project information
@@ -78,14 +81,5 @@ public class BuildService {
             logger.debug("Building mdule " + node.getKind() + " - " + node.getLabel() + "(" + node.getName() + ")" );
         }
         FsProjectStorage.storeNode(node, projectName, workspaceStorage);
-
-//        FsProjectStorage.storeNodeStepnames(node, projectName, workspaceStorage);
-//        // process the steps one-by-one
-//        for (Step step : node.getSteps()) {
-//            if(logger.isDebugEnabled()) {
-//                logger.debug("Building step " + step.getKind() + " - " + step.getName() );
-//            }
-//            FsProjectStorage.storeNodeStep(step, node, projectName, workspaceStorage);
-//        }
     }
 }

@@ -73,16 +73,19 @@ public class BuildService {
         if(logger.isDebugEnabled()) {
             logger.debug("Building module " + node.getName() );
         }
-
         // TODO sanitize node name!
-
-        FsProjectStorage.storeNodeStepnames(node, projectName, workspaceStorage);
-        // process the steps one-by-one
-        for (Step step : node.getSteps()) {
-            if(logger.isDebugEnabled()) {
-                logger.debug("Building step " + step.getKind() + " - " + step.getName() );
-            }
-            FsProjectStorage.storeNodeStep(step, node, projectName, workspaceStorage);
+        if(logger.isDebugEnabled()) {
+            logger.debug("Building mdule " + node.getKind() + " - " + node.getLabel() + "(" + node.getName() + ")" );
         }
+        FsProjectStorage.storeNode(node, projectName, workspaceStorage);
+
+//        FsProjectStorage.storeNodeStepnames(node, projectName, workspaceStorage);
+//        // process the steps one-by-one
+//        for (Step step : node.getSteps()) {
+//            if(logger.isDebugEnabled()) {
+//                logger.debug("Building step " + step.getKind() + " - " + step.getName() );
+//            }
+//            FsProjectStorage.storeNodeStep(step, node, projectName, workspaceStorage);
+//        }
     }
 }

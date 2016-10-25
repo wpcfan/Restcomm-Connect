@@ -30,6 +30,7 @@ import org.restcomm.connect.rvd.interpreter.exceptions.BadExternalServiceRespons
 import org.restcomm.connect.rvd.interpreter.exceptions.InvalidAccessOperationAction;
 import org.restcomm.connect.rvd.model.ModelMarshaler;
 import org.restcomm.connect.rvd.model.StepJsonDeserializer;
+import org.restcomm.connect.rvd.model.client.Node;
 import org.restcomm.connect.rvd.model.client.Step;
 import org.restcomm.connect.rvd.model.rcml.RcmlResponse;
 import org.restcomm.connect.rvd.model.rcml.RcmlStep;
@@ -331,11 +332,16 @@ public class Interpreter {
 
             if (rcmlModel == null )
                 rcmlModel = new RcmlResponse();
-            List<String> nodeStepnames = FsProjectStorage.loadNodeStepnames(appName, target.getNodename(), workspaceStorage);
 
-            // if no starting step has been specified in the target, use the first step of the node as default
-            if (target.getStepname() == null && !nodeStepnames.isEmpty())
-                target.setStepname(nodeStepnames.get(0));
+            // get the module to execute
+            Node currentModule = FsProjectStorage.loadNode(appName, target.getNodename(), workspaceStorage);
+            List<Step> steps = currentModule.getSteps();
+            // determine which step to start execution from
+            String startingStepName = target.getStepname();
+            if (startingStepName == null && !steps.isEmpty()) {
+                // if no starting step is defined start from the first one (if any)
+                startingStepName = steps.get(0).getName();
+            }
 
             // Prepend step if required. Usually used for error messages
             if ( prependStep != null ) {
@@ -347,14 +353,12 @@ public class Interpreter {
             }
 
             boolean startstep_found = false;
-            for (String stepname : nodeStepnames) {
-
-                if (stepname.equals(target.getStepname()))
+            for (Step step: steps) {
+                if ( startingStepName.equals(step.getName()) )
                     startstep_found = true;
 
                 if (startstep_found) {
                     // we found our starting step. Let's start processing
-                    Step step = loadStep(stepname);
                     String rerouteTo = step.process(this, httpRequest); // is meaningful only for some of the steps like ExternalService steps
                     // check if we have to break the currently rendered module
                     if ( rerouteTo != null )
@@ -365,7 +369,6 @@ public class Interpreter {
                         rcmlModel.steps.add(rcmlStep);
                 }
             }
-
             rcmlResult = xstream.toXML(rcmlModel);
         }
 

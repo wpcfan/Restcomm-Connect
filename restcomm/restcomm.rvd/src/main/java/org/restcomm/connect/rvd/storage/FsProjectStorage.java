@@ -225,6 +225,14 @@ public class FsProjectStorage {
         storage.storeEntity(step, node.getName()+"."+step.getName(), projectName+"/data/");
     }
 
+    public static Node loadNode(String projectName, String nodeName, WorkspaceStorage storage) throws StorageException {
+        return storage.loadEntity(nodeName+".module",projectName+"/data", Node.class);
+    }
+
+    public static void storeNode(Node node, String projectName, WorkspaceStorage storage) throws StorageException {
+        storage.storeEntity(node, node.getName()+".module", projectName+"/data/");
+    }
+
     public static ProjectSettings loadProjectSettings(String projectName, WorkspaceStorage storage) throws StorageException {
         return storage.loadEntity("settings", projectName, ProjectSettings.class);
     }

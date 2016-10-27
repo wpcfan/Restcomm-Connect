@@ -206,23 +206,6 @@ public class FsProjectStorage {
         workspaceStorage.storeEntity(projectOptions, ProjectOptions.class, "project", projectName+"/data");
     }
 
-    public static void storeNodeStepnames(Node node, String projectName, WorkspaceStorage storage) throws StorageException {
-        List<String> stepnames = new ArrayList<String>();
-        for ( Step step : node.getSteps() ) {
-            stepnames.add(step.getName());
-        }
-        storage.storeEntity(stepnames, node.getName()+".node", projectName+"/data");
-    }
-
-    public static List<String> loadNodeStepnames(String projectName, String nodeName, WorkspaceStorage storage) throws StorageException {
-        List<String> stepnames = storage.loadEntity(nodeName+".node", projectName+"/data", new TypeToken<List<String>>(){}.getType());
-        return stepnames;
-    }
-
-    public static void storeNodeStep(Step step, Node node, String projectName, WorkspaceStorage storage) throws StorageException {
-        storage.storeEntity(step, node.getName()+"."+step.getName(), projectName+"/data/");
-    }
-
     public static Node loadNode(String projectName, String nodeName, WorkspaceStorage storage) throws StorageException {
         return storage.loadEntity(nodeName+".module",projectName+"/data", Node.class);
     }
@@ -239,14 +222,6 @@ public class FsProjectStorage {
         storage.storeEntity(projectSettings, "settings", projectName);
     }
 
-    /*
-    @Override
-    public
-    ProjectState loadProject(String name) throws StorageException {
-        String stateData = storageBase.loadProjectFile(name, ".", "state");
-        return marshaler.toModel(stateData, ProjectState.class);
-    }
-    */
     public static ProjectState loadProject(String projectName, WorkspaceStorage storage) throws StorageException {
         return storage.loadEntity("state", projectName, ProjectState.class);
     }
@@ -296,16 +271,6 @@ public class FsProjectStorage {
         if ( !projectDirectory.mkdir() )
             throw new StorageException("Cannot create project directory. Don't know why - " + projectDirectory );
 
-    }
-
-    public static void renameProject(String projectName, String newProjectName, WorkspaceStorage storage) throws StorageException {
-        try {
-            File sourceDir = new File(storage.rootPath  + File.separator + projectName);
-            File destDir = new File(storage.rootPath  + File.separator + newProjectName);
-            FileUtils.moveDirectory(sourceDir, destDir);
-        } catch (IOException e) {
-            throw new StorageException("Error renaming directory '" + projectName + "' to '" + newProjectName + "'");
-        }
     }
 
     public static void deleteProject(String projectName, WorkspaceStorage storage) throws StorageException {

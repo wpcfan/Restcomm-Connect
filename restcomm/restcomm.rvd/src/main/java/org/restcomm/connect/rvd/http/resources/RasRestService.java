@@ -49,9 +49,10 @@ import org.restcomm.connect.rvd.model.packaging.Rapp;
 import org.restcomm.connect.rvd.model.packaging.RappBinaryInfo;
 import org.restcomm.connect.rvd.model.packaging.RappConfig;
 import org.restcomm.connect.rvd.model.project.RvdProject;
-import org.restcomm.connect.rvd.storage.FsPackagingStorage;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsPackagingDao;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
+import org.restcomm.connect.rvd.storage.WorkspaceStorageFactory;
 import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 import org.restcomm.connect.rvd.utils.RvdUtils;
@@ -78,7 +79,7 @@ public class RasRestService extends SecuredRestService {
         rvdContext = new RvdContext(request, servletContext,applicationContext.getConfiguration());
         settings = rvdContext.getSettings();
         marshaler = rvdContext.getMarshaler();
-        workspaceStorage = new WorkspaceStorage(settings.getWorkspaceBasePath(), marshaler);
+        workspaceStorage = new WorkspaceStorageFactory(settings, marshaler).create();
         rasService = new RasService(rvdContext, workspaceStorage);
         projectService = new ProjectService(rvdContext,workspaceStorage);
     }
@@ -105,7 +106,7 @@ public class RasRestService extends SecuredRestService {
         if(logger.isDebugEnabled()) {
             logger.debug("retrieving app package for project " + applicationSid);
         }
-        if (!FsPackagingStorage.hasPackaging(applicationSid, workspaceStorage))
+        if (!FsPackagingDao.hasPackaging(applicationSid, workspaceStorage))
             return buildErrorResponse(Status.NOT_FOUND, RvdResponse.Status.OK, null);
 
         Rapp rapp = rasService.getApp(applicationSid);
@@ -134,7 +135,7 @@ public class RasRestService extends SecuredRestService {
 
             Gson gson = new Gson();
             Rapp rapp = gson.fromJson(rappData, Rapp.class);
-            if ( !FsPackagingStorage.hasPackaging(applicationSid, workspaceStorage) ) {
+            if ( !FsPackagingDao.hasPackaging(applicationSid, workspaceStorage) ) {
                 rasService.createApp(rapp, applicationSid);
             } else {
                 rasService.saveApp(rapp, applicationSid);
@@ -165,7 +166,7 @@ public class RasRestService extends SecuredRestService {
             logger.debug("preparig app zip for project " + applicationSid);
         }
         try {
-            if (FsPackagingStorage.hasPackaging(applicationSid, workspaceStorage)) {
+            if (FsPackagingDao.hasPackaging(applicationSid, workspaceStorage)) {
                 RvdProject project = projectService.load(applicationSid);
                 project.getState().getHeader().setOwner(null); //  no owner should in the exported project
                 rasService.createZipPackage(project);
@@ -207,9 +208,9 @@ public class RasRestService extends SecuredRestService {
         }
 
         try {
-            if (FsPackagingStorage.hasPackaging(applicationSid, workspaceStorage)) {
+            if (FsPackagingDao.hasPackaging(applicationSid, workspaceStorage)) {
                 //Validator validator = new RappConfigValidator();
-                InputStream zipStream = FsPackagingStorage.getRappBinary(applicationSid, workspaceStorage);
+                InputStream zipStream = FsPackagingDao.getRappBinary(applicationSid, workspaceStorage);
                 return Response.ok(zipStream, "application/zip").header("Content-Disposition", "attachment; filename*=UTF-8''" + RvdUtils.myUrlEncode(projectName + ".ras.zip")).build();
             } else {
                 return null;
@@ -233,7 +234,7 @@ public class RasRestService extends SecuredRestService {
             for (ProjectItem project : items) {
                 projectNames.add(project.getName());
             }
-            List<RappItem> rapps = FsProjectStorage.listRapps(projectNames, workspaceStorage, projectService);
+            List<RappItem> rapps = FsProjectDao.listRapps(projectNames, workspaceStorage, projectService);
             return buildOkResponse(rapps);
         } catch (StorageException e) {
             return buildErrorResponse(Status.OK, RvdResponse.Status.ERROR, e);
@@ -262,7 +263,7 @@ public class RasRestService extends SecuredRestService {
                     projectNames.add(project.getName());
                 }
             }
-            List<RappItem> rapps = FsProjectStorage.listRapps(projectNames, workspaceStorage, projectService);
+            List<RappItem> rapps = FsProjectDao.listRapps(projectNames, workspaceStorage, projectService);
             return buildOkResponse(rapps);
         } catch (StorageException e) {
             return buildErrorResponse(Status.OK, RvdResponse.Status.ERROR, e);
@@ -318,7 +319,7 @@ public class RasRestService extends SecuredRestService {
                             // Import application
                             effectiveProjectName = rasService.importAppToWorkspace(applicationSid, item.openStream(),
                                     getLoggedUsername(), projectService);
-                            ProjectState projectState = FsProjectStorage.loadProject(applicationSid, workspaceStorage);
+                            ProjectState projectState = FsProjectDao.loadProject(applicationSid, workspaceStorage);
 
                             // Update application
                             applicationsApi.updateApplication(applicationSid, effectiveProjectName,
@@ -377,10 +378,10 @@ public class RasRestService extends SecuredRestService {
 
         RappConfig rappConfig;
         // first, try to return the 'Rapp' from the packaging directory
-        if (FsProjectStorage.hasPackagingInfo(applicationSid, workspaceStorage)) {
+        if (FsProjectDao.hasPackagingInfo(applicationSid, workspaceStorage)) {
             return getConfigFromPackaging(applicationSid);
             /*try {
-                Rapp rapp = FsProjectStorage.loadRappFromPackaging(projectName, workspaceStorage);
+                Rapp rapp = FsProjectDao.loadRappFromPackaging(projectName, workspaceStorage);
                 return buildOkResponse(rapp.getConfig());
             } catch (StorageException e) {
                 logger.error(e.getMessage(), e);
@@ -408,10 +409,10 @@ public class RasRestService extends SecuredRestService {
         }
         try {
             Rapp rapp;
-            if (FsProjectStorage.hasPackagingInfo(applicationSid, workspaceStorage))
-                rapp = FsProjectStorage.loadRappFromPackaging(applicationSid, workspaceStorage);
+            if (FsProjectDao.hasPackagingInfo(applicationSid, workspaceStorage))
+                rapp = FsProjectDao.loadRappFromPackaging(applicationSid, workspaceStorage);
             else
-                rapp = FsProjectStorage.loadRapp(applicationSid, workspaceStorage);
+                rapp = FsProjectDao.loadRapp(applicationSid, workspaceStorage);
             return buildOkResponse(rapp);
         } catch (StorageEntityNotFound e) {
             return Response.status(Status.NOT_FOUND).build();
@@ -424,7 +425,7 @@ public class RasRestService extends SecuredRestService {
         secure();
         //logger.info("getting configuration options for " + projectName);
        try {
-            Rapp rapp = FsProjectStorage.loadRappFromPackaging(applicationSid, workspaceStorage);
+            Rapp rapp = FsProjectDao.loadRappFromPackaging(applicationSid, workspaceStorage);
             return buildOkResponse(rapp.getConfig());
         } catch (StorageException e) {
             logger.error(e.getMessage(), e);
@@ -447,7 +448,7 @@ public class RasRestService extends SecuredRestService {
             String bootstrapInfo;
             bootstrapInfo = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
 
-            FsProjectStorage.storeBootstrapInfo(bootstrapInfo, applicationSid, workspaceStorage);
+            FsProjectDao.storeBootstrapInfo(bootstrapInfo, applicationSid, workspaceStorage);
             return buildOkResponse();
 
         } catch (StorageException e) {
@@ -462,10 +463,10 @@ public class RasRestService extends SecuredRestService {
     public Response getBootstrap(@PathParam("applicationSid") String applicationSid) {
         secure();
         try {
-            if ( ! FsProjectStorage.hasBootstrapInfo(applicationSid, workspaceStorage) )
+            if ( ! FsProjectDao.hasBootstrapInfo(applicationSid, workspaceStorage) )
                 return Response.status(Status.NOT_FOUND).build();
 
-            String bootstrapInfo = FsProjectStorage.loadBootstrapInfo(applicationSid, workspaceStorage);
+            String bootstrapInfo = FsProjectDao.loadBootstrapInfo(applicationSid, workspaceStorage);
             return Response.ok(bootstrapInfo, MediaType.APPLICATION_JSON).build();
         } catch (StorageException e) {
             logger.error(e,e);

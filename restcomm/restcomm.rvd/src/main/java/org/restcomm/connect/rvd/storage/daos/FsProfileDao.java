@@ -18,9 +18,10 @@
  *
  */
 
-package org.restcomm.connect.rvd.storage;
+package org.restcomm.connect.rvd.storage.daos;
 
 import org.restcomm.connect.rvd.model.UserProfile;
+import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 
@@ -28,7 +29,7 @@ import org.restcomm.connect.rvd.storage.exceptions.StorageException;
  * A data access object that reads user profile information from the FS workspace.
  * It relies on WorkspaceStorage utility
  *
- * @author Orestis Tsakiridis
+ * @author otsakir@gmail.com - Orestis Tsakiridis
  */
 public class FsProfileDao implements ProfileDao {
 

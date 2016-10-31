@@ -47,11 +47,11 @@ import org.restcomm.connect.rvd.model.client.StateHeader;
 import org.restcomm.connect.rvd.restcomm.RestcommAccountInfo;
 import org.restcomm.connect.rvd.restcomm.RestcommClient;
 import org.restcomm.connect.rvd.restcomm.RestcommCallArray;
-import org.restcomm.connect.rvd.storage.FsProfileDao;
-import org.restcomm.connect.rvd.storage.ProfileDao;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProfileDao;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
+import org.restcomm.connect.rvd.storage.daos.ProfileDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
-import org.restcomm.connect.rvd.storage.FsCallControlInfoStorage;
+import org.restcomm.connect.rvd.storage.daos.FsCallControlInfoDao;
 import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 import org.restcomm.connect.rvd.storage.exceptions.WavItemDoesNotExist;
@@ -86,7 +86,7 @@ public class RvdController extends SecuredRestService {
                                     MultivaluedMap<String, String> requestParams) {
         String rcmlResponse;
         try {
-            if (!FsProjectStorage.projectExists(appname, workspaceStorage))
+            if (!FsProjectDao.projectExists(appname, workspaceStorage))
                 return Response.status(Status.NOT_FOUND).build();
 
             String targetParam = requestParams.getFirst("target");
@@ -163,7 +163,7 @@ public class RvdController extends SecuredRestService {
         InputStream wavStream;
 
         try {
-            wavStream = FsProjectStorage.getWav(projectName, filename, workspaceStorage);
+            wavStream = FsProjectDao.getWav(projectName, filename, workspaceStorage);
             return Response.ok(wavStream, "audio/x-wav")
                     .header("Content-Disposition", "attachment; filename = " + filename).build();
         } catch (WavItemDoesNotExist e) {
@@ -188,9 +188,9 @@ public class RvdController extends SecuredRestService {
             rvdContext.getProjectLogger().log("WebTrigger incoming request: " + ui.getRequestUri().toString(),false).tag("app", projectName).tag("WebTrigger").done();
 
         // load CC/WebTrigger project info
-        CallControlInfo info = FsCallControlInfoStorage.loadInfo(projectName, workspaceStorage);
+        CallControlInfo info = FsCallControlInfoDao.loadInfo(projectName, workspaceStorage);
         // find the owner of the project
-        StateHeader projectHeader = FsProjectStorage.loadStateHeader(projectName,workspaceStorage);
+        StateHeader projectHeader = FsProjectDao.loadStateHeader(projectName,workspaceStorage);
         String owner = projectHeader.getOwner();
         if (RvdUtils.isEmpty(owner))
             throw new CallControlException("Project '" + projectName + "' has no owner and can't be started using WebTrigger.");
@@ -393,7 +393,7 @@ public class RvdController extends SecuredRestService {
             rvdContext.setProjectName(appName);
 
             // make sure logging is enabled before allowing access to sensitive log information
-            ProjectSettings projectSettings = FsProjectStorage.loadProjectSettings(appName, workspaceStorage);
+            ProjectSettings projectSettings = FsProjectDao.loadProjectSettings(appName, workspaceStorage);
             if (projectSettings == null || projectSettings.getLogging() == false)
                 return Response.status(Status.NOT_FOUND).build();
 
@@ -425,7 +425,7 @@ public class RvdController extends SecuredRestService {
             rvdContext.setProjectName(appName);
 
             // make sure logging is enabled before allowing access to sensitive log information
-            ProjectSettings projectSettings = FsProjectStorage.loadProjectSettings(appName, workspaceStorage);
+            ProjectSettings projectSettings = FsProjectDao.loadProjectSettings(appName, workspaceStorage);
             if (projectSettings == null || projectSettings.getLogging() == false)
                 return Response.status(Status.NOT_FOUND).build();
 

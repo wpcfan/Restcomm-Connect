@@ -54,9 +54,10 @@ import org.restcomm.connect.rvd.model.client.ProjectItem;
 import org.restcomm.connect.rvd.model.client.ProjectState;
 import org.restcomm.connect.rvd.model.client.StateHeader;
 import org.restcomm.connect.rvd.model.client.WavItem;
-import org.restcomm.connect.rvd.storage.FsCallControlInfoStorage;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsCallControlInfoDao;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
+import org.restcomm.connect.rvd.storage.WorkspaceStorageFactory;
 import org.restcomm.connect.rvd.storage.exceptions.BadWorkspaceDirectoryStructure;
 import org.restcomm.connect.rvd.storage.exceptions.ProjectAlreadyExists;
 import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
@@ -93,7 +94,7 @@ public class ProjectRestService extends SecuredRestService {
         rvdContext = new RvdContext(request, servletContext,applicationContext.getConfiguration());
         rvdSettings = rvdContext.getSettings();
         marshaler = rvdContext.getMarshaler();
-        workspaceStorage = new WorkspaceStorage(rvdSettings.getWorkspaceBasePath(), marshaler);
+        workspaceStorage = new WorkspaceStorageFactory(rvdSettings, marshaler).create();
         projectService = new ProjectService(rvdContext, workspaceStorage);
     }
 
@@ -114,9 +115,9 @@ public class ProjectRestService extends SecuredRestService {
      * @throws ProjectDoesNotExist
      */
     void assertProjectAvailable(String projectName) throws StorageException, ProjectDoesNotExist {
-        if (!FsProjectStorage.projectExists(projectName, workspaceStorage))
+        if (!FsProjectDao.projectExists(projectName, workspaceStorage))
             throw new ProjectDoesNotExist("Project " + projectName + " does not exist");
-        ProjectState project = FsProjectStorage.loadProject(projectName, workspaceStorage);
+        ProjectState project = FsProjectDao.loadProject(projectName, workspaceStorage);
         if (project.getHeader().getOwner() != null) {
             // needs further checking
             String loggedUser = getUserIdentityContext().getAccountUsername();
@@ -229,7 +230,7 @@ public class ProjectRestService extends SecuredRestService {
                 logger.info("Saving project " + applicationSid);
             }
             try {
-                ProjectState existingProject = FsProjectStorage.loadProject(applicationSid, workspaceStorage);
+                ProjectState existingProject = FsProjectDao.loadProject(applicationSid, workspaceStorage);
 
                 if (getLoggedUsername().equals(existingProject.getHeader().getOwner())
                         || existingProject.getHeader().getOwner() == null) {
@@ -270,9 +271,9 @@ public class ProjectRestService extends SecuredRestService {
             String data = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
             CallControlInfo ccInfo = marshaler.toModel(data, CallControlInfo.class);
             if (ccInfo != null)
-                FsCallControlInfoStorage.storeInfo(ccInfo, applicationSid, workspaceStorage);
+                FsCallControlInfoDao.storeInfo(ccInfo, applicationSid, workspaceStorage);
             else
-                FsCallControlInfoStorage.clearInfo(applicationSid, workspaceStorage);
+                FsCallControlInfoDao.clearInfo(applicationSid, workspaceStorage);
 
             return Response.ok().build();
         } catch (IOException e) {
@@ -289,7 +290,7 @@ public class ProjectRestService extends SecuredRestService {
     public Response getCcInfo(@PathParam("applicationSid") String applicationSid) {
         secure();
         try {
-            CallControlInfo ccInfo = FsCallControlInfoStorage.loadInfo(applicationSid, workspaceStorage);
+            CallControlInfo ccInfo = FsCallControlInfoDao.loadInfo(applicationSid, workspaceStorage);
             return Response.ok(marshaler.toData(ccInfo), MediaType.APPLICATION_JSON).build();
             // return buildOkResponse(ccInfo);
         } catch (StorageEntityNotFound e) {
@@ -442,7 +443,7 @@ public class ProjectRestService extends SecuredRestService {
                             // buildService.buildProject(effectiveProjectName);
 
                             // Load project kind
-                            String projectString = FsProjectStorage.loadProjectString(applicationSid, workspaceStorage);
+                            String projectString = FsProjectDao.loadProjectString(applicationSid, workspaceStorage);
                             ProjectState state = marshaler.toModel(projectString, ProjectState.class);
                             String projectKind = state.getHeader().getProjectKind();
 
@@ -611,7 +612,7 @@ public class ProjectRestService extends SecuredRestService {
             @PathParam("filename") String filename) {
         InputStream wavStream;
         try {
-            wavStream = FsProjectStorage.getWav(applicationSid, filename + ".wav", workspaceStorage);
+            wavStream = FsProjectDao.getWav(applicationSid, filename + ".wav", workspaceStorage);
             return Response.ok(wavStream, "audio/x-wav").header("Content-Disposition", "attachment; filename = " + filename)
                     .build();
         } catch (WavItemDoesNotExist e) {
@@ -651,7 +652,7 @@ public class ProjectRestService extends SecuredRestService {
         try {
             data = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
             ProjectSettings projectSettings = marshaler.toModel(data, ProjectSettings.class);
-            FsProjectStorage.storeProjectSettings(projectSettings, applicationSid, workspaceStorage);
+            FsProjectDao.storeProjectSettings(projectSettings, applicationSid, workspaceStorage);
             return Response.ok().build();
         } catch (StorageException e) {
             logger.error(e, e);
@@ -668,7 +669,7 @@ public class ProjectRestService extends SecuredRestService {
     public Response getProjectSettings(@PathParam("applicationSid") String applicationSid) {
         secure();
         try {
-            ProjectSettings projectSettings = FsProjectStorage.loadProjectSettings(applicationSid, workspaceStorage);
+            ProjectSettings projectSettings = FsProjectDao.loadProjectSettings(applicationSid, workspaceStorage);
             return Response.ok(marshaler.toData(projectSettings)).build();
         } catch (StorageEntityNotFound e) {
             return Response.status(Status.NOT_FOUND).build();

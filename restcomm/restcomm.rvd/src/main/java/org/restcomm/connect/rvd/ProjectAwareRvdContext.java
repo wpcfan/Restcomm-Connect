@@ -4,7 +4,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.restcomm.connect.rvd.model.ProjectSettings;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 
@@ -38,7 +38,7 @@ public class ProjectAwareRvdContext extends RvdContext {
         if (projectName != null) {
             this.projectLogger = new ProjectLogger(projectName, getSettings(), getMarshaler());
             try {
-                this.projectSettings = FsProjectStorage.loadProjectSettings(projectName, workspaceStorage);
+                this.projectSettings = FsProjectDao.loadProjectSettings(projectName, workspaceStorage);
             } catch (StorageEntityNotFound e) {
                 this.projectSettings = ProjectSettings.createDefault();
             } catch (StorageException e) {

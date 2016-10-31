@@ -25,7 +25,7 @@ import org.restcomm.connect.rvd.model.client.ProjectState;
 import org.restcomm.connect.rvd.model.client.StateHeader;
 import org.restcomm.connect.rvd.model.client.WavItem;
 import org.restcomm.connect.rvd.model.project.RvdProject;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.BadProjectHeader;
 import org.restcomm.connect.rvd.storage.exceptions.StorageEntityNotFound;
@@ -144,14 +144,14 @@ public class ProjectService {
     public List<ProjectItem> getAvailableProjectsByOwner(String ownerFilter) throws StorageException {
 
         List<ProjectItem> items = new ArrayList<ProjectItem>();
-        for (String entry : FsProjectStorage.listProjectNames(workspaceStorage) ) {
+        for (String entry : FsProjectDao.listProjectNames(workspaceStorage) ) {
 
             String kind = "voice";
             String owner = null;
             ProjectItem item = new ProjectItem();
             item.setName(entry);
             try {
-                StateHeader header = FsProjectStorage.loadStateHeader(entry, workspaceStorage);
+                StateHeader header = FsProjectDao.loadStateHeader(entry, workspaceStorage);
                 item.setStatus(ProjectService.projectStatus(header));
                 kind = header.getProjectKind();
                 owner = header.getOwner();
@@ -159,7 +159,7 @@ public class ProjectService {
                 // for old projects
                 JsonParser parser = new JsonParser();
                 //JsonObject root_element = parser.parse(projectStorage.loadProjectState(entry)).getAsJsonObject();
-                JsonObject root_element = parser.parse(FsProjectStorage.loadProjectString(entry, workspaceStorage)).getAsJsonObject();
+                JsonObject root_element = parser.parse(FsProjectDao.loadProjectString(entry, workspaceStorage)).getAsJsonObject();
                 JsonElement projectKind_element = root_element.get("projectKind");
                 if ( projectKind_element != null ) {
                     kind = projectKind_element.getAsString();
@@ -216,9 +216,9 @@ public class ProjectService {
             state = ProjectState.createEmptySms(owner);
 
         //projectStorage.createProjectSlot(projectName);
-        FsProjectStorage.createProjectSlot(projectName, workspaceStorage);
+        FsProjectDao.createProjectSlot(projectName, workspaceStorage);
 
-        FsProjectStorage.storeProject(true, state, projectName, workspaceStorage);
+        FsProjectDao.storeProject(true, state, projectName, workspaceStorage);
         return state;
     }
 
@@ -250,7 +250,7 @@ public class ProjectService {
         // preserve project owner
         state.getHeader().setOwner(existingProject.getHeader().getOwner());
         //projectStorage.storeProject(projectName, state, false);
-        FsProjectStorage.storeProject(false, state, projectName, workspaceStorage);
+        FsProjectDao.storeProject(false, state, projectName, workspaceStorage);
 
         if ( !validationResult.isSuccess() ) {
             throw new ValidationException(validationResult);
@@ -258,13 +258,13 @@ public class ProjectService {
     }
 
     public void deleteProject(String projectName) throws ProjectDoesNotExist, StorageException {
-        if (! FsProjectStorage.projectExists(projectName,workspaceStorage))
+        if (! FsProjectDao.projectExists(projectName,workspaceStorage))
             throw new ProjectDoesNotExist();
-        FsProjectStorage.deleteProject(projectName,workspaceStorage);
+        FsProjectDao.deleteProject(projectName,workspaceStorage);
     }
 
     public InputStream archiveProject(String projectName) throws StorageException {
-        return FsProjectStorage.archiveProject(projectName,workspaceStorage);
+        return FsProjectDao.archiveProject(projectName,workspaceStorage);
     }
 
     public void importProjectFromRawArchive(InputStream archiveStream, String applicationSid, String owner) throws RvdException {
@@ -307,15 +307,15 @@ public class ProjectService {
                 }
             }
             // project is either compatible or was upgraded
-            ProjectState state = FsProjectStorage.loadProject(tempProjectDir.getName(), tempStorage);
+            ProjectState state = FsProjectDao.loadProject(tempProjectDir.getName(), tempStorage);
             state.getHeader().setOwner(owner);
-            FsProjectStorage.storeProject(false, state, tempProjectDir.getName(), tempStorage);
+            FsProjectDao.storeProject(false, state, tempProjectDir.getName(), tempStorage);
 
             // TODO Make these an atomic action!
-            suggestedName = FsProjectStorage.getAvailableProjectName(suggestedName, workspaceStorage);
-            FsProjectStorage.createProjectSlot(suggestedName, workspaceStorage);
+            suggestedName = FsProjectDao.getAvailableProjectName(suggestedName, workspaceStorage);
+            FsProjectDao.createProjectSlot(suggestedName, workspaceStorage);
 
-            FsProjectStorage.importProjectFromDirectory(tempProjectDir, suggestedName, true, workspaceStorage);
+            FsProjectDao.importProjectFromDirectory(tempProjectDir, suggestedName, true, workspaceStorage);
             return suggestedName;
 
         } catch ( UnsupportedProjectVersion e) {
@@ -328,15 +328,15 @@ public class ProjectService {
     }
 
     public void addWavToProject(String projectName, String wavName, InputStream wavStream) throws StorageException {
-        FsProjectStorage.storeWav(projectName, wavName, wavStream, workspaceStorage);
+        FsProjectDao.storeWav(projectName, wavName, wavStream, workspaceStorage);
     }
 
     public List<WavItem> getWavs(String appName) throws StorageException {
-        return FsProjectStorage.listWavs(appName, workspaceStorage);
+        return FsProjectDao.listWavs(appName, workspaceStorage);
     }
 
     public void removeWavFromProject(String projectName, String wavName) throws WavItemDoesNotExist {
-        FsProjectStorage.deleteWav(projectName, wavName,workspaceStorage);
+        FsProjectDao.deleteWav(projectName, wavName,workspaceStorage);
     }
 
     /**
@@ -349,7 +349,7 @@ public class ProjectService {
     public RvdProject load(String projectName) throws RvdException {
         String projectJson;
         try {
-            projectJson = FsProjectStorage.loadProjectString(projectName, workspaceStorage);
+            projectJson = FsProjectDao.loadProjectString(projectName, workspaceStorage);
         } catch (StorageEntityNotFound e) {
             throw new ProjectDoesNotExist("Error loading project " + projectName, e);
         }

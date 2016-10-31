@@ -19,8 +19,8 @@ import org.restcomm.connect.rvd.model.packaging.RappBinaryInfo;
 import org.restcomm.connect.rvd.model.packaging.RappConfig;
 import org.restcomm.connect.rvd.model.packaging.RappInfo;
 import org.restcomm.connect.rvd.model.project.RvdProject;
-import org.restcomm.connect.rvd.storage.FsPackagingStorage;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsPackagingDao;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 import org.restcomm.connect.rvd.upgrade.UpgradeService;
@@ -74,7 +74,7 @@ public class RasService {
         XStream xstream = marshaler.getXStream();
         xstream.alias("restcommApplication", RappInfo.class);
 
-        Rapp rapp = FsPackagingStorage.loadRapp(projectName, workspaceStorage);
+        Rapp rapp = FsPackagingDao.loadRapp(projectName, workspaceStorage);
         String configData = gson.toJson(rapp.getConfig());
         //String infoData = gson.toJson(rapp.getInfo());
         String infoData = xstream.toXML(rapp.getInfo());
@@ -93,8 +93,8 @@ public class RasService {
 
                 if ( project.supportsWavs() ) {
                     zipper.addDirectory("/app/rvd/wavs/");
-                    for ( WavItem wavItem : FsProjectStorage.listWavs(projectName, workspaceStorage) ) {
-                        InputStream wavStream = FsProjectStorage.getWav(projectName, wavItem.getFilename(), workspaceStorage);
+                    for ( WavItem wavItem : FsProjectDao.listWavs(projectName, workspaceStorage) ) {
+                        InputStream wavStream = FsProjectDao.getWav(projectName, wavItem.getFilename(), workspaceStorage);
                         try {
                             zipper.addFile("app/rvd/wavs/" + wavItem.getFilename(), wavStream );
                         } finally {
@@ -108,13 +108,13 @@ public class RasService {
                 zipper.finish();
             }
 
-            FsPackagingStorage.storeRappBinary(tempFile, projectName, workspaceStorage);
-            // TODO - if FsProjectStorage  is not used, the temporaty file should still be removed (in this case it is not moved) !!!
+            FsPackagingDao.storeRappBinary(tempFile, projectName, workspaceStorage);
+            // TODO - if FsProjectDao  is not used, the temporaty file should still be removed (in this case it is not moved) !!!
             if(logger.isDebugEnabled()) {
                 logger.debug("Zip package created for project " + projectName);
             }
 
-            return FsPackagingStorage.getRappBinary(projectName, workspaceStorage);
+            return FsPackagingDao.getRappBinary(projectName, workspaceStorage);
         } catch (IOException e) {
             throw new PackagingException("Error creating temporaty zip file ", e);
         }
@@ -160,7 +160,7 @@ public class RasService {
             if (runtimePackageVersion < effectivePackageVersion)
                 throw new UnsupportedRasApplicationVersion("Incompatible application package. Version " + effectivePackageVersion + " is not supported");
             // Make sure no such restcomm app already exists (single instance limitation)
-            List<RappItem> rappItems = FsProjectStorage.listRapps(FsProjectStorage.listProjectNames(workspaceStorage), workspaceStorage, projectService);
+            List<RappItem> rappItems = FsProjectDao.listRapps(FsProjectDao.listProjectNames(workspaceStorage), workspaceStorage, projectService);
             for (RappItem rappItem : rappItems)
                 if (rappItem.getRappInfo() != null && rappItem.getRappInfo().getId() != null && rappItem.getRappInfo().getId().equals(info.getId()))
                     throw new RestcommAppAlreadyExists("A restcomm application with id " + rappItem.getRappInfo().getId() + "  already exists. Cannot import " + info.getName() + " app");
@@ -171,7 +171,7 @@ public class RasService {
 
             // Store rapp for later usage
             Rapp rapp = new Rapp(info, config);
-            FsProjectStorage.storeRapp(rapp, applicationSid, workspaceStorage);
+            FsProjectDao.storeRapp(rapp, applicationSid, workspaceStorage);
         } finally {
             // now remove temporary directory
             FileUtils.deleteQuietly(tempDir);
@@ -196,10 +196,10 @@ public class RasService {
         rapp.getInfo().setRvdAppVersion(RvdConfiguration.getRvdProjectVersion());
 
         // preserve the app's id
-        Rapp existingRapp = FsPackagingStorage.loadRapp(projectName,workspaceStorage);
+        Rapp existingRapp = FsPackagingDao.loadRapp(projectName,workspaceStorage);
         rapp.getInfo().setId( existingRapp.getInfo().getId() );
 
-        FsPackagingStorage.storeRapp(rapp, projectName, workspaceStorage);
+        FsPackagingDao.storeRapp(rapp, projectName, workspaceStorage);
     }
 
     /**
@@ -219,21 +219,21 @@ public class RasService {
         rapp.getInfo().setRvdAppVersion(RvdConfiguration.getRvdProjectVersion());
 
         // rapp.getInfo().setId(generateAppId(projectName)); // Let the RAS administrator choose an id for the app after submission
-        FsPackagingStorage.storeRapp(rapp, projectName, workspaceStorage);
+        FsPackagingDao.storeRapp(rapp, projectName, workspaceStorage);
     }
 
     public Rapp getApp(String projectName) throws StorageException {
-        return FsPackagingStorage.loadRapp(projectName, workspaceStorage);
+        return FsPackagingDao.loadRapp(projectName, workspaceStorage);
     }
 
     public RappConfig getRappConfig(String projectName) throws StorageException {
-        Rapp rapp = FsProjectStorage.loadRapp(projectName, workspaceStorage);
+        Rapp rapp = FsProjectDao.loadRapp(projectName, workspaceStorage);
         return rapp.getConfig();
     }
 
     public RappBinaryInfo getBinaryInfo(String projectName) {
         RappBinaryInfo binaryInfo = new RappBinaryInfo();
-        binaryInfo.setExists( FsPackagingStorage.binaryAvailable(projectName, workspaceStorage) );
+        binaryInfo.setExists( FsPackagingDao.binaryAvailable(projectName, workspaceStorage) );
 
         return binaryInfo;
     }

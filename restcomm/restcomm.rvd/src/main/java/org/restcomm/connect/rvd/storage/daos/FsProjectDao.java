@@ -18,9 +18,8 @@
  *
  */
 
-package org.restcomm.connect.rvd.storage;
+package org.restcomm.connect.rvd.storage.daos;
 
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
@@ -38,10 +37,10 @@ import org.restcomm.connect.rvd.model.RappItem;
 import org.restcomm.connect.rvd.model.client.Node;
 import org.restcomm.connect.rvd.model.client.ProjectState;
 import org.restcomm.connect.rvd.model.client.StateHeader;
-import org.restcomm.connect.rvd.model.client.Step;
 import org.restcomm.connect.rvd.model.client.WavItem;
 import org.restcomm.connect.rvd.model.packaging.Rapp;
 import org.restcomm.connect.rvd.model.server.ProjectOptions;
+import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.BadProjectHeader;
 import org.restcomm.connect.rvd.storage.exceptions.BadWorkspaceDirectoryStructure;
 import org.restcomm.connect.rvd.storage.exceptions.ProjectAlreadyExists;
@@ -68,8 +67,8 @@ import java.util.List;
 /**
  * @author Orestis Tsakiridis
  */
-public class FsProjectStorage {
-    static final Logger logger = Logger.getLogger(FsProjectStorage.class.getName());
+public class FsProjectDao {
+    static final Logger logger = Logger.getLogger(FsProjectDao.class.getName());
 
     public static List<String> listProjectNames(WorkspaceStorage workspaceStorage) throws BadWorkspaceDirectoryStructure {
         List<String> items = new ArrayList<String>();
@@ -150,7 +149,7 @@ public class FsProjectStorage {
             RappItem item = new RappItem();
             item.setProjectName(projectName);
 
-            if ( FsProjectStorage.hasRasInfo(projectName, workspaceStorage) ) {
+            if ( FsProjectDao.hasRasInfo(projectName, workspaceStorage) ) {
                 item.setWasImported(true);
 
                 // load info from rapp file
@@ -159,7 +158,7 @@ public class FsProjectStorage {
 
                 // app status
                 boolean installedStatus = true;
-                boolean configuredStatus = FsProjectStorage.hasBootstrapInfo(projectName, workspaceStorage);
+                boolean configuredStatus = FsProjectDao.hasBootstrapInfo(projectName, workspaceStorage);
                 boolean activeStatus = installedStatus && configuredStatus;
                 RappItem.RappStatus[] statuses = new RappItem.RappStatus[3];
                 statuses[0] = RappItem.RappStatus.Installed; // always set
@@ -169,7 +168,7 @@ public class FsProjectStorage {
             } else
                 item.setWasImported(false);
 
-            if ( FsProjectStorage.hasPackagingInfo(projectName, workspaceStorage) ) {
+            if ( FsProjectDao.hasPackagingInfo(projectName, workspaceStorage) ) {
                 item.setHasPackaging(true);
 
                 // load info from rapp file
@@ -178,7 +177,7 @@ public class FsProjectStorage {
 
                 // app status
                 /*boolean installedStatus = true;
-                boolean configuredStatus = FsProjectStorage.hasBootstrapInfo(projectName, workspaceStorage);
+                boolean configuredStatus = FsProjectDao.hasBootstrapInfo(projectName, workspaceStorage);
                 boolean activeStatus = installedStatus && configuredStatus;
                 RappStatus[] statuses = new RappStatus[3];
                 statuses[0] = RappStatus.Installed; // always set
@@ -189,7 +188,7 @@ public class FsProjectStorage {
             } else
                 item.setHasPackaging(false);
 
-            item.setHasBootstrap(FsProjectStorage.hasBootstrapInfo(projectName, workspaceStorage));
+            item.setHasBootstrap(FsProjectDao.hasBootstrapInfo(projectName, workspaceStorage));
             item.setStartUrl(projectService.buildStartUrl(projectName));
 
             rapps.add(item);

@@ -15,7 +15,7 @@ import org.restcomm.connect.rvd.RvdContext;
 import org.restcomm.connect.rvd.exceptions.ProjectDoesNotExist;
 import org.restcomm.connect.rvd.identity.UserIdentityContext;
 import org.restcomm.connect.rvd.model.client.WavItem;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 
 @Path("designer")
@@ -49,7 +49,7 @@ public class DesignerRestService extends SecuredRestService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response listBundledWavs(@PathParam("name") String name) throws StorageException, ProjectDoesNotExist {
         secure();
-        List<WavItem> items = FsProjectStorage.listBundledWavs(rvdContext);
+        List<WavItem> items = FsProjectDao.listBundledWavs(rvdContext);
         return buildOkResponse(items);
     }
 

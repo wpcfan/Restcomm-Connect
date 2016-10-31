@@ -27,11 +27,9 @@ import org.restcomm.connect.rvd.BuildService;
 import org.restcomm.connect.rvd.RvdConfiguration;
 import org.restcomm.connect.rvd.model.ModelMarshaler;
 import org.restcomm.connect.rvd.model.client.ProjectState;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
-import org.restcomm.connect.rvd.upgrade.ProjectUpgrader10to11;
-import org.restcomm.connect.rvd.upgrade.UpgradeService;
 import org.restcomm.connect.rvd.upgrade.exceptions.UpgradeException;
 
 /**
@@ -54,13 +52,13 @@ public class ProjectUpgraderTest {
         String upgradedVersion = ProjectUpgrader10to11.getVersion(rootElement);
         Assert.assertEquals("Actual upgraded project version is wrong", RvdConfiguration.getRvdProjectVersion(), upgradedVersion);
         // make sure the project builds also
-        ProjectState project = FsProjectStorage.loadProject("collectMenuProject", workspaceStorage);
+        ProjectState project = FsProjectDao.loadProject("collectMenuProject", workspaceStorage);
         buildService.buildProject("project3", project);
 
         // check the collect/menu digits propert has been converted integer -> string
         rootElement = upgradeService.upgradeProject("collectMenuProject");
         Assert.assertNotNull(rootElement);
-        project = FsProjectStorage.loadProject("collectMenuProject", workspaceStorage);
+        project = FsProjectDao.loadProject("collectMenuProject", workspaceStorage);
         buildService.buildProject("collectMenuProject",project);
     }
 }

@@ -8,7 +8,7 @@ import org.restcomm.connect.rvd.model.client.ProjectState;
 import org.restcomm.connect.rvd.model.client.Step;
 import org.restcomm.connect.rvd.model.server.NodeName;
 import org.restcomm.connect.rvd.model.server.ProjectOptions;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 
@@ -44,7 +44,7 @@ public class BuildService {
      */
     public void buildProject(String projectName, ProjectState projectState) throws StorageException {
         // clear previous built files
-        FsProjectStorage.clearExecutableData(projectName, workspaceStorage);
+        FsProjectDao.clearExecutableData(projectName, workspaceStorage);
 
         ProjectOptions projectOptions = new ProjectOptions();
 
@@ -64,11 +64,11 @@ public class BuildService {
         //if ( projectState.getHeader().getLogging() != null )
         //    projectOptions.setLogging(true);
         // Save the nodename-node-label mapping
-        FsProjectStorage.storeProjectOptions(projectOptions, projectName, workspaceStorage);
+        FsProjectDao.storeProjectOptions(projectOptions, projectName, workspaceStorage);
     }
 
     public void buildProject(String projectName) throws StorageException {
-        ProjectState state = FsProjectStorage.loadProject(projectName, workspaceStorage);
+        ProjectState state = FsProjectDao.loadProject(projectName, workspaceStorage);
         buildProject(projectName, state);
     }
 
@@ -80,6 +80,6 @@ public class BuildService {
         if(logger.isDebugEnabled()) {
             logger.debug("Building mdule " + node.getKind() + " - " + node.getLabel() + "(" + node.getName() + ")" );
         }
-        FsProjectStorage.storeNode(node, projectName, workspaceStorage);
+        FsProjectDao.storeNode(node, projectName, workspaceStorage);
     }
 }

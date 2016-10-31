@@ -37,6 +37,7 @@ import org.restcomm.connect.rvd.model.client.ProjectItem;
 import org.restcomm.connect.rvd.model.project.RvdProject;
 import org.restcomm.connect.rvd.restcomm.RestcommAccountInfo;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
+import org.restcomm.connect.rvd.storage.WorkspaceStorageFactory;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -73,7 +74,7 @@ public class NotificationsRestService extends SecuredRestService {
     public void init() {
         super.init();  // setup userIdentityContext
         RvdContext rvdContext = new RvdContext(request, servletContext,applicationContext.getConfiguration());
-        WorkspaceStorage storage = new WorkspaceStorage(applicationContext.getConfiguration().getWorkspaceBasePath(), rvdContext.getMarshaler());
+        WorkspaceStorage storage = new WorkspaceStorageFactory(applicationContext.getConfiguration(), rvdContext.getMarshaler()).create();
         projectService = new ProjectService(rvdContext, storage);
     }
 

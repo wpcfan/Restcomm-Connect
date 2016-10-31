@@ -27,6 +27,8 @@ import org.junit.Assert;
 import org.restcomm.connect.rvd.TestUtils;
 import org.restcomm.connect.rvd.model.ModelMarshaler;
 import org.restcomm.connect.rvd.model.UserProfile;
+import org.restcomm.connect.rvd.storage.daos.FsProfileDao;
+import org.restcomm.connect.rvd.storage.daos.ProfileDao;
 
 import java.io.File;
 import java.io.IOException;

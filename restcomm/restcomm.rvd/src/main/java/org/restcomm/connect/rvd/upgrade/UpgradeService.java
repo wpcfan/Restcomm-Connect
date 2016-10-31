@@ -9,7 +9,7 @@ import org.restcomm.connect.rvd.RvdConfiguration;
 import org.restcomm.connect.rvd.exceptions.InvalidProjectVersion;
 import org.restcomm.connect.rvd.model.client.ProjectState;
 import org.restcomm.connect.rvd.model.client.StateHeader;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.BadProjectHeader;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
@@ -137,7 +137,7 @@ public class UpgradeService {
         StateHeader header = null;
         String startVersion = null;
         try {
-            header = FsProjectStorage.loadStateHeader(projectName,workspaceStorage);
+            header = FsProjectDao.loadStateHeader(projectName,workspaceStorage);
             startVersion = header.getVersion();
         } catch (BadProjectHeader e) {
             // it looks like this is an old project.
@@ -156,7 +156,7 @@ public class UpgradeService {
         }
 
         String version = startVersion;
-        String source = FsProjectStorage.loadProjectString(projectName, workspaceStorage);
+        String source = FsProjectDao.loadProjectString(projectName, workspaceStorage);
         JsonParser parser = new JsonParser();
         JsonElement root = parser.parse(source);
 
@@ -178,8 +178,8 @@ public class UpgradeService {
             throw new NoUpgradePathException("No upgrade path for project " + projectName + ". Best effort from version: " + startVersion + " - to version: " + versionPath[versionPath.length-1]);
         }
 
-        FsProjectStorage.backupProjectState(projectName,workspaceStorage);
-        FsProjectStorage.updateProjectState(projectName, root.toString(), workspaceStorage);
+        FsProjectDao.backupProjectState(projectName,workspaceStorage);
+        FsProjectDao.updateProjectState(projectName, root.toString(), workspaceStorage);
         return root;
     }
     /**
@@ -192,7 +192,7 @@ public class UpgradeService {
         int uptodateCount = 0;
         int failedCount = 0;
 
-        List<String> projectNames = FsProjectStorage.listProjectNames(workspaceStorage);
+        List<String> projectNames = FsProjectDao.listProjectNames(workspaceStorage);
         for ( String projectName : projectNames ) {
             try {
                 if ( upgradeProject(projectName) != null ) {
@@ -201,7 +201,7 @@ public class UpgradeService {
                         logger.info("project '" + projectName + "' upgraded to version " + RvdConfiguration.getRvdProjectVersion() );
                     }
                     try {
-                        ProjectState projectState = FsProjectStorage.loadProject(projectName, workspaceStorage);
+                        ProjectState projectState = FsProjectDao.loadProject(projectName, workspaceStorage);
                         buildService.buildProject(projectName, projectState);
                         if(logger.isInfoEnabled()) {
                             logger.info("project '" + projectName + "' built");

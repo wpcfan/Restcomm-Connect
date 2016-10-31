@@ -70,7 +70,7 @@ import org.restcomm.connect.rvd.model.steps.ussdlanguage.UssdLanguageConverter;
 import org.restcomm.connect.rvd.model.steps.ussdlanguage.UssdLanguageRcml;
 import org.restcomm.connect.rvd.model.steps.ussdsay.UssdSayRcml;
 import org.restcomm.connect.rvd.model.steps.ussdsay.UssdSayStepConverter;
-import org.restcomm.connect.rvd.storage.FsProjectStorage;
+import org.restcomm.connect.rvd.storage.daos.FsProjectDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
 import org.restcomm.connect.rvd.utils.RvdUtils;
@@ -266,7 +266,7 @@ public class Interpreter {
     public String interpret() throws RvdException {
         String response = null;
 
-        ProjectOptions projectOptions = FsProjectStorage.loadProjectOptions(appName, workspaceStorage); //rvdContext.getRuntimeProjectOptions();
+        ProjectOptions projectOptions = FsProjectDao.loadProjectOptions(appName, workspaceStorage); //rvdContext.getRuntimeProjectOptions();
         nodeNames = projectOptions.getNodeNames();
 
         if (targetParam == null || "".equals(targetParam)) {
@@ -334,7 +334,7 @@ public class Interpreter {
                 rcmlModel = new RcmlResponse();
 
             // get the module to execute
-            Node currentModule = FsProjectStorage.loadNode(appName, target.getNodename(), workspaceStorage);
+            Node currentModule = FsProjectDao.loadNode(appName, target.getNodename(), workspaceStorage);
             List<Step> steps = currentModule.getSteps();
             // determine which step to start execution from
             String startingStepName = target.getStepname();
@@ -376,7 +376,7 @@ public class Interpreter {
     }
 
     private Step loadStep(String stepname) throws StorageException  {
-        String stepfile_json = FsProjectStorage.loadStep(appName, target.getNodename(), stepname, workspaceStorage);
+        String stepfile_json = FsProjectDao.loadStep(appName, target.getNodename(), stepname, workspaceStorage);
         Step step = gson.fromJson(stepfile_json, Step.class);
 
         return step;
@@ -760,10 +760,10 @@ public class Interpreter {
      */
     private void processBootstrapParameters() throws StorageException {
 
-        if ( ! FsProjectStorage.hasBootstrapInfo(appName, workspaceStorage) )
+        if ( ! FsProjectDao.hasBootstrapInfo(appName, workspaceStorage) )
             return; // nothing to do
 
-         String data = FsProjectStorage.loadBootstrapInfo(appName,workspaceStorage);
+         String data = FsProjectDao.loadBootstrapInfo(appName,workspaceStorage);
          JsonParser parser = new JsonParser();
          JsonElement rootElement = parser.parse(data);
 

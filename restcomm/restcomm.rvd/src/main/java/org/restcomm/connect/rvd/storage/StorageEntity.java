@@ -17,20 +17,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
  */
-
 package org.restcomm.connect.rvd.storage;
 
-import org.restcomm.connect.rvd.model.UserProfile;
+import java.util.Date;
 
 /**
- * @author Orestis Tsakiridis
+ * An abstraction layer over the file. It help decouple storage layer from filesystem.
+ *
+ * @author otsakir@gmail.com - Orestis Tsakiridis
  */
-public interface ProfileDao {
-    void saveUserProfile(String username, UserProfile userProfile);
+public class StorageEntity {
+    String name;
+    Boolean isDirectory;
+    Date lastModified;
 
-    /**
-     * @param username
-     * @return the user profile for user 'username' and null if the user does not exist
-     */
-    UserProfile loadUserProfile(String username);
+    public StorageEntity(String name, Boolean isDirectory) {
+        this.name = name;
+        this.isDirectory = isDirectory;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDirectory(Boolean directory) {
+        isDirectory = directory;
+    }
+
+    public void setLastModified(Date lastModified) {
+        this.lastModified = lastModified;
+    }
 }

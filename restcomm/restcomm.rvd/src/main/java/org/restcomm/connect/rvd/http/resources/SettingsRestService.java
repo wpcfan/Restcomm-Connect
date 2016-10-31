@@ -41,12 +41,13 @@ import org.restcomm.connect.rvd.identity.UserIdentityContext;
 import org.restcomm.connect.rvd.model.ModelMarshaler;
 import org.restcomm.connect.rvd.model.UserProfile;
 import org.restcomm.connect.rvd.model.client.SettingsModel;
-import org.restcomm.connect.rvd.storage.FsProfileDao;
-import org.restcomm.connect.rvd.storage.ProfileDao;
+import org.restcomm.connect.rvd.storage.daos.FsProfileDao;
+import org.restcomm.connect.rvd.storage.daos.ProfileDao;
 import org.restcomm.connect.rvd.storage.WorkspaceStorage;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import org.restcomm.connect.rvd.storage.WorkspaceStorageFactory;
 
 /**
  * HTTP endpoint for storage/retrieval of workspace settings.
@@ -67,7 +68,7 @@ public class SettingsRestService extends SecuredRestService {
         super.init();
         settings = applicationContext.getConfiguration();
         marshaler = new ModelMarshaler();
-        workspaceStorage = new WorkspaceStorage(settings.getWorkspaceBasePath(), marshaler);
+        workspaceStorage = new WorkspaceStorageFactory(settings, marshaler).create();
     }
 
     public SettingsRestService() {

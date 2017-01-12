@@ -13,7 +13,6 @@ var App = angular.module('Rvd', [
 	'ngCookies',
 	'ngIdle',
 	'ui.router',
-	'ngStorage',
 	'angular-md5',
 	'ngFileSaver'
 ]);

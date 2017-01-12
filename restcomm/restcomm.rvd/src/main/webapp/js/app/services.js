@@ -56,17 +56,25 @@ angular.module('Rvd').service('projectModules', [function () {
 }]);
 */
 
-angular.module('Rvd').service('storage',function ($sessionStorage) {
+angular.module('Rvd').service('storage',function () {
     function getCredentials() {
-        return $sessionStorage.rvdCredentials;
+        var sid = sessionStorage.getItem('sid');
+        var auth_token = sessionStorage.getItem('auth_token');
+        if ( !!sid && !!auth_token) {
+            return {sid: sid, auth_token: auth_token}
+        }
+        return null;
     }
 
-    function setCredentials(username, password, sid) {
-        $sessionStorage.rvdCredentials = {username: username, password: password, sid: sid};
+    function setCredentials(sid, auth_token) {
+        sessionStorage.setItem('sid',sid);
+        sessionStorage.setItem('auth_token',auth_token);
     }
 
     function clearCredentials() {
-        $sessionStorage.rvdCredentials = null;
+        sessionStorage.setItem('sid',null);
+        sessionStorage.setItem('auth_token', null);
+
     }
 
     // public interface
@@ -123,6 +131,14 @@ angular.module('Rvd').service('authentication', function ($http, $q, IdentityCon
 	}
 
     /*
+      Params
+        credsType: either 'api' or 'user' depending of whether the credentials contain sid/auth_token OR email/password
+        userid: sid OR email depending on credsType
+        secret: auth_token OR password depending on credsType
+
+        'api' credsType is used to verify credentials cached in session storage
+        'user' credsType is used when a user tries to login by supplying his email and password
+
 	  Returns a promise
 	    resolved: nothing is really returned. The following assumptions stand:
 	        - getAccount() will have a valid authenticated account
@@ -131,16 +147,24 @@ angular.module('Rvd').service('authentication', function ($http, $q, IdentityCon
 	        - RVD_ACCESS_OUT_OF_SYNC. Restcomm authentication succeeded but RVD failed. RVD is not operational. account and storage credentnials will be cleared.
 	        - NEED_LOGIN. Authentication failed. User will have to try the login screen (applies for restcomm auth type)
 	*/
-	function restcommLogin(username,password) {
+	function restcommLogin(userid,secret, credsType) {
+
 	    var deferredLogin = $q.defer();
-	    var authHeader = basicAuthHeader(username, password);
-        $http({method:'GET', url:'/restcomm/2012-04-24/Accounts.json/' + encodeURIComponent(username), headers: {Authorization: authHeader}}).then(function (response) {
+	    var authHeader = basicAuthHeader(userid, secret);
+        $http({method:'GET', url:'/restcomm/2012-04-24/Accounts.json/' + encodeURIComponent(userid), headers: {Authorization: authHeader}}).then(function (response) {
             var acc = response.data; // store temporarily the account returned
-            $http({method:'GET', url:'services/auth/keepalive', headers: {Authorization: "Basic " + btoa(acc.email_address + ":" +acc.auth_token)}}).then(function (response) {
+            // if we have a normal user login, we will use the auth_token from the account returned
+            // if we have an api 'login', then it seems that we alread loaded the auth_token form session storage. It doesn't make any sense to try to load it again from the account.
+            var auth_token;
+            if (credsType == "api")
+                auth_token = secret;
+            else // credsType == "user"
+                auth_token = acc.auth_token;
+            $http({method:'GET', url:'services/auth/keepalive', headers: {Authorization: "Basic " + btoa(acc.email_address + ":" +auth_token)}}).then(function (response) {
                 // ok, access to both restcomm and RVD is verified
                 setAccount(acc);
                 authInfo = {username:acc.email_address}; // TODO will probably add other fields here too that are not necessarily tied with the Restcomm account notion
-                storage.setCredentials(username,password,acc.sid);
+                storage.setCredentials(acc.sid,auth_token);
                 deferredLogin.resolve();
             }, function (response) {
                 setAccount(null);
@@ -174,7 +198,7 @@ angular.module('Rvd').service('authentication', function ($http, $q, IdentityCon
                 // There is no account set. If there are credentials in the storage we will try logging in using them
                 var creds = storage.getCredentials();
                 if (creds) {
-                    return restcommLogin(creds.username, creds.password); // a chained promise is returned
+                    return restcommLogin(creds.sid, creds.auth_token,"api"); // a chained promise is returned // 'api' login that provides accoun SID/auth_token
                 } else
                     throw 'NEED_LOGIN';
             } else {
@@ -185,14 +209,14 @@ angular.module('Rvd').service('authentication', function ($http, $q, IdentityCon
 	    }
 	}
 
-    // creates an auth header using a username (or sid) and a plaintext password (not already md5ed)
+    // creates an auth header using a username (or sid) and a password
 	function basicAuthHeader(username, password) {
-	    var auth_header = "Basic " + btoa(username + ":" + md5.createHash(password));
+	    var auth_header = "Basic " + btoa(username + ":" + password);
         return auth_header;
 	}
 
     function doLogin(username, password) {
-        return restcommLogin(username,password);
+        return restcommLogin(username,password,"user"); // 'user' login that provides username and password
     }
 
     function doLogout() {

@@ -160,7 +160,7 @@ curl -X GET https://ACae6e420f425248d6a26948c17a9e2acf:my_PWD@my_IP/restcomm/201
     "price": "0",
     "price_unit": "USD",
     "api_version": "2012-04-24",
-    "uri": "/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/SMS/Messages/SM55ce5cf07b9649c283cbacab4dae56a9.json"
+    "uri": "/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/SMS/Messages/SM55ce5cf07b9649c283cbacab4dae56a9.json"
   },
   {
     "sid": "SM5dd70f7ea54e47f1a49749debeec3f7f",
@@ -176,7 +176,7 @@ curl -X GET https://ACae6e420f425248d6a26948c17a9e2acf:my_PWD@my_IP/restcomm/201
     "price": "0",
     "price_unit": "USD",
     "api_version": "2012-04-24",
-    "uri": "/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/SMS/Messages/SM5dd70f7ea54e47f1a49749debeec3f7f.json"
+    "uri": "/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/SMS/Messages/SM5dd70f7ea54e47f1a49749debeec3f7f.json"
   }
 ]
 ----
@@ -204,6 +204,6 @@ curl -X GET https://ACae6e420f425248d6a26948c17a9e2acf:my_PWD@my_IP/restcomm/201
   "price": "0",
   "price_unit": "USD",
   "api_version": "2012-04-24",
-  "uri": "/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/SMS/Messages/SM55ce5cf07b9649c283cbacab4dae56a9.json"
+  "uri": "/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/SMS/Messages/SM55ce5cf07b9649c283cbacab4dae56a9.json"
 }
 ----

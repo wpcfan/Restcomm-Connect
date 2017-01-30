@@ -399,7 +399,7 @@ Result of the above command
   "sms_method": "POST",
   "sms_fallback_method": "POST",
   "api_version": "2012-04-24",
-  "uri": "/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/IncomingPhoneNumbers/PNdd7a0a0248244615978bd5781598e5eb.json"
+  "uri": "/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf/IncomingPhoneNumbers/PNdd7a0a0248244615978bd5781598e5eb.json"
 
 ....
 
